@@ -36,6 +36,15 @@ from openmed.eval.datasets.multilingual_ner import (
 )
 from openmed.eval.golden import load_benchmark_fixtures
 from openmed.eval.harness import BenchmarkFixture
+from openmed.eval.suites.chinese_clinical_ner import (
+    CHINESE_CLINICAL_NER,
+    ChineseClinicalNerLeakageError,
+    PhiTokenLeakageFinding,
+    chinese_clinical_ner_metadata,
+    load_chinese_clinical_ner_fixtures,
+    run_chinese_clinical_ner_suite,
+    run_synthetic_chinese_clinical_ner_smoke,
+)
 from openmed.eval.suites.multimodal_dicom import (
     MULTIMODAL_DICOM,
     generate_synthetic_dicom_corpus,
@@ -75,6 +84,7 @@ DEFAULT_SUITES: tuple[str, ...] = (
     POLICY_COMPLIANCE,
     BIOMEDICAL_NER,
     MULTILINGUAL_NER,
+    CHINESE_CLINICAL_NER,
     MULTIMODAL_DICOM,
 )
 
@@ -110,6 +120,8 @@ def load_suite_fixtures(name: str, **kwargs: Any) -> list[Any]:
     if suite == MULTILINGUAL_NER:
         paths = kwargs.pop("paths", kwargs.pop("path", None))
         return load_multilingual_ner_fixtures(paths=paths, **kwargs)
+    if suite == CHINESE_CLINICAL_NER:
+        return load_chinese_clinical_ner_fixtures(kwargs.get("path"))
     if suite == MULTIMODAL_DICOM:
         return load_multimodal_dicom_fixtures(**kwargs)
     raise ValueError(f"benchmark suite {suite!r} does not have a concrete loader yet")
@@ -133,6 +145,8 @@ def suite_metadata(name: str, **kwargs: Any) -> dict[str, Any]:
         return biomedical_ner_suite_metadata(**kwargs)
     if suite == MULTILINGUAL_NER:
         return multilingual_ner_suite_metadata(**kwargs)
+    if suite == CHINESE_CLINICAL_NER:
+        return chinese_clinical_ner_metadata()
     if suite == MULTIMODAL_DICOM:
         return multimodal_dicom_metadata(**kwargs)
     return {"suite": suite}
@@ -147,6 +161,7 @@ __all__ = [
     "POLICY_COMPLIANCE",
     "BIOMEDICAL_NER",
     "MULTILINGUAL_NER",
+    "CHINESE_CLINICAL_NER",
     "MULTIMODAL_DICOM",
     "RELATIONS",
     "RelationFixture",
@@ -165,6 +180,12 @@ __all__ = [
     "i2b2_suite_metadata",
     "biomedical_ner_suite_metadata",
     "multilingual_ner_suite_metadata",
+    "ChineseClinicalNerLeakageError",
+    "PhiTokenLeakageFinding",
+    "chinese_clinical_ner_metadata",
+    "load_chinese_clinical_ner_fixtures",
+    "run_chinese_clinical_ner_suite",
+    "run_synthetic_chinese_clinical_ner_smoke",
     "load_drugprot_fixtures",
     "load_biomedical_ner_fixtures",
     "load_multilingual_ner_fixtures",

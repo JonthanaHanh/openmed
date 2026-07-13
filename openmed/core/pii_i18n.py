@@ -53,6 +53,7 @@ SUPPORTED_LANGUAGES: Set[str] = {
     "th",
     "ko",
     "ro",
+    "zh",
 }
 
 # Languages with validator-backed national-ID coverage but no bundled default
@@ -77,6 +78,7 @@ LANGUAGE_NAMES: Dict[str, str] = {
     "th": "Thai",
     "ko": "Korean",
     "ro": "Romanian",
+    "zh": "Chinese",
 }
 
 LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
@@ -97,6 +99,7 @@ LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
     "th": "Thai-",
     "ko": "Korean-",
     "ro": "Romanian-",
+    "zh": "Chinese-",
 }
 
 DEFAULT_PII_MODELS: Dict[str, str] = {
@@ -117,7 +120,13 @@ DEFAULT_PII_MODELS: Dict[str, str] = {
     "th": "OpenMed/privacy-filter-multilingual",
     "ko": "OpenMed/OpenMed-PII-Korean-NomicMed-Large-395M-v1",
     "ro": "OpenMed/privacy-filter-multilingual",
+    # Multilingual fallback until a dedicated Chinese PII model ships.
+    "zh": "OpenMed/privacy-filter-multilingual",
 }
+
+# Language routes backed by an existing multilingual model even though the
+# canonical model manifest does not claim a dedicated language checkpoint.
+DEFAULT_MODEL_FALLBACK_LANGUAGES: Set[str] = {"zh"}
 
 
 # ---------------------------------------------------------------------------
@@ -1390,6 +1399,20 @@ LANGUAGE_MONTH_NAMES: Dict[str, List[str]] = {
         "octombrie",
         "noiembrie",
         "decembrie",
+    ],
+    "zh": [
+        "一月",
+        "二月",
+        "三月",
+        "四月",
+        "五月",
+        "六月",
+        "七月",
+        "八月",
+        "九月",
+        "十月",
+        "十一月",
+        "十二月",
     ],
 }
 
@@ -4346,6 +4369,21 @@ LANGUAGE_FAKE_DATA: Dict[str, Dict[str, List[str]]] = {
         "AGE": ["45", "62", "38"],
         "LOCATION": ["Bucuresti", "Cluj-Napoca", "Timisoara"],
         "ZIPCODE": ["010011", "400001", "300001"],
+    },
+    "zh": {
+        "NAME": ["王芳", "李雷", "张伟", "刘洋"],
+        "FIRST_NAME": ["芳", "雷", "伟", "洋"],
+        "LAST_NAME": ["王", "李", "张", "刘"],
+        "EMAIL": ["patient@example.cn", "contact@example.org"],
+        "PHONE": ["13800138000", "13900139000"],
+        "ID_NUM": ["CN123456", "MRN-987654"],
+        "STREET_ADDRESS": ["北京市朝阳区健康路12号", "上海市和平路45号"],
+        "URL_PERSONAL": ["https://example.cn"],
+        "USERNAME": ["patient123", "user456"],
+        "DATE": ["2000年1月1日", "1985年3月15日"],
+        "AGE": ["45", "62", "38"],
+        "LOCATION": ["北京", "上海", "广州"],
+        "ZIPCODE": ["100000", "200000", "510000"],
     },
 }
 

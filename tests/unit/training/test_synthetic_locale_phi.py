@@ -54,6 +54,7 @@ _SCRIPT_RANGES = {
     "ko": ("\uac00", "\ud7a3"),
     "te": ("\u0c00", "\u0c7f"),
     "th": ("\u0e00", "\u0e7f"),
+    "zh": ("\u4e00", "\u9fff"),
 }
 
 
@@ -103,7 +104,7 @@ def test_locale_phi_generation_is_deterministic_per_seed():
     assert first == second
 
 
-@pytest.mark.parametrize("language", ("ar", "he", "hi", "ja", "te", "th"))
+@pytest.mark.parametrize("language", ("ar", "he", "hi", "ja", "te", "th", "zh"))
 def test_non_latin_locale_templates_render_target_script(language):
     example = LocalePhiGenerator(seed=29).generate(language)
     low, high = _SCRIPT_RANGES[language]
@@ -113,4 +114,4 @@ def test_non_latin_locale_templates_render_target_script(language):
 
 def test_locale_phi_generator_rejects_unsupported_language():
     with pytest.raises(ValueError, match="unsupported locale PHI language"):
-        LocalePhiGenerator(seed=1).generate("zh")
+        LocalePhiGenerator(seed=1).generate("xx")
