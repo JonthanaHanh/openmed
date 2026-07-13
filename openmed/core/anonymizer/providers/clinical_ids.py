@@ -19,6 +19,8 @@ deterministic:
   - German Steuer-ID (Faker's ``de_DE.ssn`` is US-format)
   - Aadhaar with Verhoeff checksum (Faker's ``en_IN.aadhaar_id`` rarely
     passes the official Verhoeff check — only ~1 in 20 by sampling)
+  - ABDM identifiers: Luhn-valid 14-digit ABHA numbers, ABHA addresses,
+    PAN-shaped tax identifiers, and synthetic HPR/HFR registry identifiers
   - Spanish NIE (Faker's built-in uses non-instance randomness)
   - Spanish DNI (Faker's ``es_ES`` provider exposes NIE but not DNI)
   - Israeli Teudat Zehut (Faker has no built-in)
@@ -570,6 +572,97 @@ class AadhaarProvider(BaseProvider):
         digits.extend(self.generator.random.randint(0, 9) for _ in range(10))
         digits.append(_verhoeff_checksum(digits))
         return "".join(str(d) for d in digits)
+
+
+# ---------------------------------------------------------------------------
+# India ABDM / ABHA identifiers
+# ---------------------------------------------------------------------------
+
+_ABHA_ADDRESS_RE = re.compile(
+    r"^[a-z][a-z0-9]*(?:\.[a-z0-9]+)*@[a-z][a-z0-9-]{1,31}$",
+    re.IGNORECASE,
+)
+_PAN_RE = re.compile(r"^[A-Z]{3}[ABCFGHLJPT][A-Z][0-9]{4}[A-Z]$")
+_ABDM_REGISTRY_ID_RE = re.compile(r"^(?:HPR|HFR)-[A-Z0-9][A-Z0-9-]{5,31}$")
+_PAN_HOLDER_TYPES = "ABCFGHLJPT"
+
+
+def validate_abha_number(text: str) -> bool:
+    """Validate a 14-digit synthetic ABHA number with a Luhn check digit.
+
+    This is an offline surrogate contract; it does not query ABDM or claim
+    that a generated value has been issued to a person.
+    """
+
+    digits = _digits_only(text)
+    return len(digits) == 14 and digits != "0" * 14 and validate_luhn(digits)
+
+
+def validate_abha_address(text: str) -> bool:
+    """Validate the structural shape used for synthetic ABHA addresses."""
+
+    value = str(text or "").strip()
+    if not _ABHA_ADDRESS_RE.fullmatch(value):
+        return False
+    handle, _domain = value.split("@", 1)
+    return 4 <= len(handle) <= 32 and not handle.endswith(".")
+
+
+def validate_pan(text: str) -> bool:
+    """Validate the ten-character structural format of an Indian PAN."""
+
+    return bool(_PAN_RE.fullmatch(str(text or "").strip().upper()))
+
+
+def validate_abdm_registry_id(text: str) -> bool:
+    """Validate OpenMed's synthetic HPR/HFR surrogate shape."""
+
+    return bool(_ABDM_REGISTRY_ID_RE.fullmatch(str(text or "").strip().upper()))
+
+
+def generate_abha_number(*, rng: random.Random | None = None) -> str:
+    """Generate a 14-digit ABHA surrogate with a Luhn check digit."""
+
+    source = rng or random.Random()
+    first = str(source.randint(1, 9))
+    return generate_luhn_identifier(length=14, prefix=first, rng=source)
+
+
+class ABDMProvider(BaseProvider):
+    """Generate synthetic, validator-backed India ABDM identifiers."""
+
+    def abha_number(self) -> str:
+        return generate_abha_number(rng=self.generator.random)
+
+    def abha_address(self) -> str:
+        rng = self.generator.random
+        handle_length = rng.randint(6, 14)
+        first = rng.choice("abcdefghijklmnopqrstuvwxyz")
+        tail = "".join(
+            rng.choice("abcdefghijklmnopqrstuvwxyz0123456789")
+            for _ in range(handle_length - 1)
+        )
+        return f"{first}{tail}@{rng.choice(('abdm', 'sbx'))}"
+
+    def pan(self) -> str:
+        rng = self.generator.random
+        prefix = "".join(rng.choice(_UPPER_ALPHA) for _ in range(3))
+        holder_type = rng.choice(_PAN_HOLDER_TYPES)
+        surname_initial = rng.choice(_UPPER_ALPHA)
+        serial = f"{rng.randint(0, 9999):04d}"
+        check = rng.choice(_UPPER_ALPHA)
+        return f"{prefix}{holder_type}{surname_initial}{serial}{check}"
+
+    def abdm_hpr_id(self) -> str:
+        return self._registry_id("HPR")
+
+    def abdm_hfr_id(self) -> str:
+        return self._registry_id("HFR")
+
+    def _registry_id(self, prefix: str) -> str:
+        rng = self.generator.random
+        suffix = "".join(rng.choice(_UPPER_ALPHA + "0123456789") for _ in range(12))
+        return f"{prefix}-{suffix}"
 
 
 # ---------------------------------------------------------------------------
@@ -1626,6 +1719,7 @@ def register_clinical_providers(faker) -> None:
 
 
 __all__ = [
+    "ABDMProvider",
     "AadhaarProvider",
     "AustralianMedicareProvider",
     "AustralianTFNProvider",
@@ -1653,6 +1747,7 @@ __all__ = [
     "UKNINOProvider",
     "generate_australian_medicare",
     "generate_australian_tfn",
+    "generate_abha_number",
     "generate_bc_phn",
     "generate_bic",
     "generate_canadian_sin",
@@ -1679,6 +1774,9 @@ __all__ = [
     "register_clinical_providers",
     "validate_australian_medicare",
     "validate_australian_tfn",
+    "validate_abdm_registry_id",
+    "validate_abha_address",
+    "validate_abha_number",
     "validate_bc_phn",
     "validate_bic",
     "validate_canadian_sin",
@@ -1686,6 +1784,7 @@ __all__ = [
     "validate_luhn",
     "validate_npi",
     "validate_ontario_health_card",
+    "validate_pan",
     "validate_phone_us",
     "validate_ssn",
     "validate_uk_nhs_number",

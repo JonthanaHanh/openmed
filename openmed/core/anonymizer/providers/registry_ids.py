@@ -56,6 +56,7 @@ from openmed.core.pii_i18n import (
 
 from .clinical_ids import (
     AadhaarProvider,
+    ABDMProvider,
     AustralianMedicareProvider,
     AustralianTFNProvider,
     BCPHNProvider,
@@ -78,12 +79,16 @@ from .clinical_ids import (
     ThaiNationalIdProvider,
     UKNHSNumberProvider,
     UKNINOProvider,
+    validate_abdm_registry_id,
+    validate_abha_address,
+    validate_abha_number,
     validate_australian_medicare,
     validate_australian_tfn,
     validate_bc_phn,
     validate_canadian_sin,
     validate_npi,
     validate_ontario_health_card,
+    validate_pan,
 )
 
 NationalIdValidator = Callable[[str], bool]
@@ -268,6 +273,20 @@ def _register_builtin_specs() -> None:
         faker_method="aadhaar",
         faker_provider=AadhaarProvider,
     )
+    for id_type, validate, faker_method in (
+        ("abha_number", validate_abha_number, "abha_number"),
+        ("abha_address", validate_abha_address, "abha_address"),
+        ("pan", validate_pan, "pan"),
+        ("abdm_hpr_id", validate_abdm_registry_id, "abdm_hpr_id"),
+        ("abdm_hfr_id", validate_abdm_registry_id, "abdm_hfr_id"),
+    ):
+        _register_aliases(
+            ("in", "hi", "te", "en_IN", "hi_IN"),
+            id_type=id_type,
+            validate=validate,
+            faker_method=faker_method,
+            faker_provider=ABDMProvider,
+        )
     _register_aliases(
         ("id", "id_ID"),
         id_type="nik",
