@@ -10,21 +10,151 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
+from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from typing import Any, Final
+
+_INDIC_SCRIPT_RANGES: Final[tuple[tuple[int, int], ...]] = (
+    (0x0900, 0x097F),  # Devanagari
+    (0x0980, 0x09FF),  # Bengali
+    (0x0A00, 0x0A7F),  # Gurmukhi
+    (0x0A80, 0x0AFF),  # Gujarati
+    (0x0B00, 0x0B7F),  # Odia
+    (0x0B80, 0x0BFF),  # Tamil
+    (0x0C00, 0x0C7F),  # Telugu
+    (0x0C80, 0x0CFF),  # Kannada
+    (0x0D00, 0x0D7F),  # Malayalam
+)
+
+_INDIC_VIRAMAS: Final[frozenset[int]] = frozenset(
+    {
+        0x094D,  # Devanagari sign virama
+        0x09CD,  # Bengali sign virama
+        0x0A4D,  # Gurmukhi sign virama
+        0x0ACD,  # Gujarati sign virama
+        0x0B4D,  # Odia sign virama
+        0x0BCD,  # Tamil sign virama
+        0x0C4D,  # Telugu sign virama
+        0x0CCD,  # Kannada sign virama
+        0x0D4D,  # Malayalam sign virama
+    }
+)
+
+_JOIN_CONTROLS: Final[frozenset[str]] = frozenset({"\u200c", "\u200d"})
+
+
+def is_indic_text(text: str) -> bool:
+    """Return whether *text* contains a code point from a supported Indic script."""
+
+    return any(_is_indic_codepoint(ord(char)) for char in text)
+
+
+def iter_grapheme_clusters(text: str) -> Iterator[tuple[int, int]]:
+    """Yield extended grapheme-cluster boundaries as ``(start, end)`` pairs.
+
+    The iterator implements the core rules from Unicode Standard Annex #29
+    using only :mod:`unicodedata`. It additionally treats virama-linked Indic
+    consonants as one akshara, including join controls, dependent vowels,
+    nuktas, and Reph sequences across the nine supported Indic scripts.
+
+    Args:
+        text: Source Unicode text. Returned offsets index this exact string.
+
+    Yields:
+        Half-open ``(start, end)`` code-point offsets for each cluster.
+    """
+
+    if not text:
+        return
+
+    cluster_start = 0
+    regional_indicators = 1 if _is_regional_indicator(text[0]) else 0
+
+    for index in range(1, len(text)):
+        if _has_grapheme_break(
+            text,
+            cluster_start=cluster_start,
+            index=index,
+            regional_indicators=regional_indicators,
+        ):
+            yield cluster_start, index
+            cluster_start = index
+            regional_indicators = 1 if _is_regional_indicator(text[index]) else 0
+        elif _is_regional_indicator(text[index]):
+            regional_indicators += 1
+        else:
+            regional_indicators = 0
+
+    yield cluster_start, len(text)
+
+
+def is_grapheme_boundary(index: int, text: str) -> bool:
+    """Return whether *index* is a grapheme boundary in *text*."""
+
+    if index < 0 or index > len(text):
+        return False
+    if index in {0, len(text)}:
+        return True
+    return any(end == index for _, end in iter_grapheme_clusters(text))
+
+
+def snap_span_to_graphemes(start: int, end: int, text: str) -> tuple[int, int]:
+    """Expand ``[start, end)`` to the nearest enclosing grapheme boundaries.
+
+    Invalid offsets are clamped to *text*. An empty span already on a boundary
+    remains empty; an empty span inside a cluster expands to that whole cluster.
+    """
+
+    safe_start = max(0, min(int(start), len(text)))
+    safe_end = max(safe_start, min(int(end), len(text)))
+    snapped_start = safe_start
+    snapped_end = safe_end
+
+    for cluster_start, cluster_end in iter_grapheme_clusters(text):
+        if cluster_start < safe_start < cluster_end:
+            snapped_start = cluster_start
+        if cluster_start < safe_end < cluster_end:
+            snapped_end = cluster_end
+        if cluster_start >= safe_end:
+            break
+
+    return snapped_start, max(snapped_start, snapped_end)
 
 
 def trim_span_whitespace(start: int, end: int, text: str) -> tuple[int, int]:
     """Strip leading and trailing whitespace from ``text[start:end]``.
 
     Returns the inclusive ``[start, end)`` indices into ``text`` after
-    trimming. ``start`` and ``end`` are clamped so ``start <= end``.
+    trimming. Input offsets are snapped outward before whole whitespace
+    clusters are removed, so the returned offsets never split a grapheme.
     """
-    while start < end and text[start].isspace():
-        start += 1
-    while end > start and text[end - 1].isspace():
-        end -= 1
-    return start, end
+
+    start, end = snap_span_to_graphemes(start, end, text)
+    clusters = list(iter_grapheme_clusters(text[start:end]))
+    if not clusters:
+        return start, end
+
+    left = 0
+    while left < len(clusters):
+        cluster_start, cluster_end = clusters[left]
+        if not text[start + cluster_start : start + cluster_end].isspace():
+            break
+        left += 1
+
+    if left == len(clusters):
+        return end, end
+
+    right = len(clusters)
+    while right > left:
+        cluster_start, cluster_end = clusters[right - 1]
+        if not text[start + cluster_start : start + cluster_end].isspace():
+            break
+        right -= 1
+
+    trimmed_start = start + clusters[left][0]
+    trimmed_end = start + clusters[right - 1][1]
+    return trimmed_start, trimmed_end
 
 
 _PRIVACY_FILTER_SPAN_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
@@ -56,13 +186,184 @@ def refine_privacy_filter_span(
             continue
         match = pattern.search(span_text)
         if match:
-            return start + match.start(), start + match.end()
+            return trim_span_whitespace(
+                *snap_span_to_graphemes(
+                    start + match.start(),
+                    start + match.end(),
+                    text,
+                ),
+                text,
+            )
 
     for suffix in (" and", " or"):
         if span_text.lower().endswith(suffix):
             end -= len(suffix)
             break
     return trim_span_whitespace(start, end, text)
+
+
+def _has_grapheme_break(
+    text: str,
+    *,
+    cluster_start: int,
+    index: int,
+    regional_indicators: int,
+) -> bool:
+    previous = text[index - 1]
+    current = text[index]
+
+    # GB3, followed by GB4/GB5.
+    if previous == "\r" and current == "\n":
+        return False
+    if _is_grapheme_control(previous) or _is_grapheme_control(current):
+        return True
+
+    # GB6-GB8: conjoining Hangul syllable sequences.
+    previous_hangul = _hangul_type(previous)
+    current_hangul = _hangul_type(current)
+    if previous_hangul == "L" and current_hangul in {"L", "V", "LV", "LVT"}:
+        return False
+    if previous_hangul in {"LV", "V"} and current_hangul in {"V", "T"}:
+        return False
+    if previous_hangul in {"LVT", "T"} and current_hangul == "T":
+        return False
+
+    # GB9, GB9a, and GB9b.
+    if _is_extend(current) or current == "\u200d" or _is_spacing_mark(current):
+        return False
+    if _is_prepend(previous):
+        return False
+
+    # GB9c plus explicit Indic aksara tailoring.
+    if _is_indic_conjunct_boundary(text, cluster_start, index):
+        return False
+
+    # GB11: extended pictographic + Extend* + ZWJ + pictographic.
+    if _is_extended_pictographic(current) and previous == "\u200d":
+        cursor = index - 2
+        while cursor >= cluster_start and _is_extend(text[cursor]):
+            cursor -= 1
+        if cursor >= cluster_start and _is_extended_pictographic(text[cursor]):
+            return False
+
+    # GB12/GB13: pair regional indicators from the start of the cluster.
+    if (
+        _is_regional_indicator(previous)
+        and _is_regional_indicator(current)
+        and regional_indicators % 2 == 1
+    ):
+        return False
+
+    return True
+
+
+def _is_indic_codepoint(codepoint: int) -> bool:
+    return any(start <= codepoint <= end for start, end in _INDIC_SCRIPT_RANGES)
+
+
+def _indic_script_index(char: str) -> int | None:
+    codepoint = ord(char)
+    for index, (start, end) in enumerate(_INDIC_SCRIPT_RANGES):
+        if start <= codepoint <= end:
+            return index
+    return None
+
+
+def _is_indic_consonant(char: str) -> bool:
+    return _indic_script_index(char) is not None and unicodedata.category(
+        char
+    ).startswith("L")
+
+
+def _is_indic_conjunct_boundary(
+    text: str,
+    cluster_start: int,
+    index: int,
+) -> bool:
+    current = text[index]
+    current_script = _indic_script_index(current)
+    if current_script is None or not _is_indic_consonant(current):
+        return False
+
+    cursor = index - 1
+    saw_virama = False
+    while cursor >= cluster_start:
+        char = text[cursor]
+        if ord(char) in _INDIC_VIRAMAS:
+            saw_virama = True
+            cursor -= 1
+            continue
+        if _is_extend(char) or char in _JOIN_CONTROLS:
+            cursor -= 1
+            continue
+        return (
+            saw_virama
+            and _is_indic_consonant(char)
+            and _indic_script_index(char) == current_script
+        )
+    return False
+
+
+def _is_extend(char: str) -> bool:
+    codepoint = ord(char)
+    return (
+        unicodedata.category(char) in {"Mn", "Me"}
+        or char == "\u200c"
+        or 0x1F3FB <= codepoint <= 0x1F3FF
+        or 0xFE00 <= codepoint <= 0xFE0F
+        or 0xE0100 <= codepoint <= 0xE01EF
+    )
+
+
+def _is_spacing_mark(char: str) -> bool:
+    return unicodedata.category(char) == "Mc"
+
+
+def _is_grapheme_control(char: str) -> bool:
+    if char in _JOIN_CONTROLS or _is_prepend(char):
+        return False
+    return unicodedata.category(char) in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+
+
+def _is_prepend(char: str) -> bool:
+    codepoint = ord(char)
+    return (
+        0x0600 <= codepoint <= 0x0605
+        or codepoint == 0x06DD
+        or codepoint == 0x070F
+        or codepoint == 0x0890
+        or codepoint == 0x0891
+        or codepoint == 0x08E2
+        or codepoint == 0x110BD
+        or codepoint == 0x110CD
+    )
+
+
+def _hangul_type(char: str) -> str | None:
+    codepoint = ord(char)
+    if 0x1100 <= codepoint <= 0x115F or 0xA960 <= codepoint <= 0xA97C:
+        return "L"
+    if 0x1160 <= codepoint <= 0x11A7 or 0xD7B0 <= codepoint <= 0xD7C6:
+        return "V"
+    if 0x11A8 <= codepoint <= 0x11FF or 0xD7CB <= codepoint <= 0xD7FB:
+        return "T"
+    if 0xAC00 <= codepoint <= 0xD7A3:
+        return "LV" if (codepoint - 0xAC00) % 28 == 0 else "LVT"
+    return None
+
+
+def _is_regional_indicator(char: str) -> bool:
+    return 0x1F1E6 <= ord(char) <= 0x1F1FF
+
+
+def _is_extended_pictographic(char: str) -> bool:
+    codepoint = ord(char)
+    return (
+        0x1F000 <= codepoint <= 0x1FAFF
+        or 0x1FC00 <= codepoint <= 0x1FFFD
+        or 0x2600 <= codepoint <= 0x27BF
+        or codepoint in {0x00A9, 0x00AE, 0x203C, 0x2049, 0x2122, 0x2139}
+    )
 
 
 def _byte_offset(text: str, char_offset: int) -> int:
