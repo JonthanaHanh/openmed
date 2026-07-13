@@ -1,6 +1,7 @@
 """Model loading functionality for OpenMed."""
 
 import gc
+import importlib.util
 import logging
 from collections.abc import Mapping
 from pathlib import Path
@@ -8,27 +9,51 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
-try:
-    from transformers import (
-        AutoConfig,
-        AutoModelForTokenClassification,
-        AutoTokenizer,
-        pipeline,
-    )
+HF_AVAILABLE = importlib.util.find_spec("transformers") is not None
+AutoTokenizer: Any = None
+AutoModelForTokenClassification: Any = None
+AutoConfig: Any = None
+pipeline: Any = None
 
-    HF_AVAILABLE = True
-except (ImportError, OSError) as e:
-    HF_AVAILABLE = False
-    logger.warning(
-        "HuggingFace transformers could not be imported (%s). "
-        "Install with: pip install transformers",
-        e,
-    )
 
-    AutoTokenizer = None  # type: ignore[assignment]
-    AutoModelForTokenClassification = None  # type: ignore[assignment]
-    AutoConfig = None  # type: ignore[assignment]
-    pipeline = None  # type: ignore[assignment]
+def _load_transformers() -> None:
+    """Import transformers lazily so ``import openmed`` stays lightweight."""
+    global AutoConfig
+    global AutoModelForTokenClassification
+    global AutoTokenizer
+    global pipeline
+
+    if all(
+        dependency is not None
+        for dependency in (
+            AutoConfig,
+            AutoModelForTokenClassification,
+            AutoTokenizer,
+            pipeline,
+        )
+    ):
+        return
+
+    try:
+        from transformers import AutoConfig as TransformersAutoConfig
+        from transformers import (
+            AutoModelForTokenClassification as TransformersAutoModel,
+        )
+        from transformers import AutoTokenizer as TransformersAutoTokenizer
+        from transformers import pipeline as transformers_pipeline
+    except (ImportError, OSError) as exc:
+        raise ImportError(
+            "HuggingFace transformers is required. "
+            "Install with: pip install transformers"
+        ) from exc
+
+    AutoConfig = AutoConfig or TransformersAutoConfig
+    AutoModelForTokenClassification = (
+        AutoModelForTokenClassification or TransformersAutoModel
+    )
+    AutoTokenizer = AutoTokenizer or TransformersAutoTokenizer
+    pipeline = pipeline or transformers_pipeline
+
 
 if TYPE_CHECKING:
     from .config import OpenMedConfig
@@ -65,6 +90,7 @@ class ModelLoader:
                 "HuggingFace transformers is required. "
                 "Install with: pip install transformers"
             )
+        _load_transformers()
 
         self.config = config or get_config()
         configure_offline_mode(self.config)

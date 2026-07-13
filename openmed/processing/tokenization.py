@@ -1,16 +1,17 @@
 """Tokenization utilities for OpenMed."""
 
+from __future__ import annotations
+
+import importlib.util
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple
 
-try:
+if TYPE_CHECKING:
     from transformers import PreTrainedTokenizer
 
-    HF_AVAILABLE = True
-except (ImportError, OSError):
-    HF_AVAILABLE = False
+HF_AVAILABLE = importlib.util.find_spec("transformers") is not None
 
 logger = logging.getLogger(__name__)
 
