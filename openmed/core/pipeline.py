@@ -22,6 +22,7 @@ from .schemas.span import ACTION_KEEP, OpenMedSpan, hmac_text_hash
 # which otherwise imports ``Pipeline`` only when ``deidentify`` is called.
 DeidentificationMethod = Literal[
     "mask",
+    "aadhaar_mask",
     "remove",
     "replace",
     "hash",
@@ -1564,7 +1565,9 @@ def _deterministic_patterns(lang: str) -> list[PIIPattern]:
         validator=clinical_ids.validate_luhn,
     )
     if lang == "en":
-        return [luhn_mrn, *PII_PATTERNS]
+        from .pii_i18n import AADHAAR_PII_PATTERNS
+
+        return [luhn_mrn, *PII_PATTERNS, *AADHAAR_PII_PATTERNS]
 
     from .pii_i18n import get_patterns_for_language
 
