@@ -4475,6 +4475,7 @@ dask = [
     { name = "dask", extra = ["dataframe"] },
 ]
 dev = [
+    { name = "cryptography" },
     { name = "dask", extra = ["dataframe"] },
     { name = "duckdb" },
     { name = "fastapi" },
@@ -4527,6 +4528,9 @@ hf = [
     { name = "huggingface-hub" },
     { name = "tokenizers" },
     { name = "transformers" },
+]
+integrity = [
+    { name = "cryptography" },
 ]
 kafka = [
     { name = "confluent-kafka" },
@@ -4620,6 +4624,8 @@ requires-dist = [
     { name = "click", marker = "extra == 'spacy'", specifier = ">=8.0" },
     { name = "confluent-kafka", marker = "extra == 'kafka'", specifier = ">=2.3" },
     { name = "coremltools", marker = "extra == 'coreml'", specifier = ">=8.0" },
+    { name = "cryptography", marker = "extra == 'dev'", specifier = ">=42,<50" },
+    { name = "cryptography", marker = "extra == 'integrity'", specifier = ">=42,<50" },
     { name = "dask", extras = ["dataframe"], marker = "extra == 'dask'", specifier = ">=2024.8" },
     { name = "dask", extras = ["dataframe"], marker = "extra == 'dev'", specifier = ">=2024.8" },
     { name = "duckdb", marker = "extra == 'dev'", specifier = ">=1.0,<2" },
@@ -4720,7 +4726,7 @@ requires-dist = [
     { name = "typer", marker = "extra == 'cli'", specifier = ">=0.12" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'service'", specifier = ">=0.29" },
 ]
-provides-extras = ["agents", "awq", "cli", "cloud", "columnar", "coreml", "dask", "dev", "docs", "duckdb", "gliner", "gptq", "grounding", "hf", "kafka", "langchain", "llamaindex", "mcp", "mlx", "multimodal", "ocr-paddle", "onnx", "openvino", "pandas", "philter", "polars", "presidio", "pydeid", "service", "spacy", "spark"]
+provides-extras = ["agents", "awq", "cli", "cloud", "columnar", "coreml", "dask", "dev", "docs", "duckdb", "gliner", "gptq", "grounding", "hf", "integrity", "kafka", "langchain", "llamaindex", "mcp", "mlx", "multimodal", "ocr-paddle", "onnx", "openvino", "pandas", "philter", "polars", "presidio", "pydeid", "service", "spacy", "spark"]
 
 [[package]]
 name = "opentelemetry-api"

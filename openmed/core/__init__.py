@@ -18,6 +18,7 @@ from .hf_hub import (
     prefetch_model,
     resolve_repo_id,
 )
+from .model_integrity import ModelIntegrityError
 from .model_search import ModelQuery, ModelSearchResult, search_models
 from .models import ModelLoader, load_model
 from .offline import OfflineModeError
@@ -57,6 +58,7 @@ from .surrogate_vault import (
 
 __all__ = [
     "ModelLoader",
+    "ModelIntegrityError",
     "load_model",
     "ModelQuery",
     "ModelSearchResult",
