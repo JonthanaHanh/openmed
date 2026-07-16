@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import json
+import re
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
 from openmed.core.arbitration import MODE_HIGH_RECALL_UNION
 from openmed.core.cascade import R3_ACCURATE, CascadeRouter
-from openmed.core.labels import CANONICAL_LABELS
+from openmed.core.labels import (
+    CANONICAL_LABELS,
+    NDPA_SENSITIVE_CLASS_LABELS,
+    NDPA_SENSITIVE_DATA_CLASSES,
+    ndpa_classes_for,
+)
 from openmed.core.pii import deidentify
 from openmed.core.pipeline import Pipeline
 from openmed.core.policy import (
@@ -16,6 +24,7 @@ from openmed.core.policy import (
     list_policies,
     load_policy,
 )
+from openmed.core.policy_lint import lint_policy as lint_policy_report
 from openmed.core.schemas.span import OpenMedSpan, hmac_text_hash
 from openmed.processing.outputs import EntityPrediction, PredictionResult
 
@@ -75,6 +84,40 @@ def _span(label: str = "PERSON", score: float = 0.95) -> OpenMedSpan:
         score=score,
         detector="model:tiny",
     )
+
+
+def _ng_ndpa_checklist_rows() -> dict[str, tuple[str, ...]]:
+    checklist_path = (
+        Path(__file__).resolve().parents[3]
+        / "docs"
+        / "compliance"
+        / "ng-ndpa-identifier-checklist.md"
+    )
+    checklist = checklist_path.read_text(encoding="utf-8")
+    table = checklist.split("<!-- ndpa-sensitive-data-table:start -->", 1)[1].split(
+        "<!-- ndpa-sensitive-data-table:end -->",
+        1,
+    )[0]
+    rows: dict[str, tuple[str, ...]] = {}
+    for line in table.splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        class_match = re.fullmatch(r"`([^`]+)`", cells[0])
+        assert class_match is not None
+        rows[class_match.group(1)] = tuple(re.findall(r"`([A-Z][A-Z0-9_]*)`", cells[2]))
+    return rows
+
+
+def _ng_ndpa_fixture_cases() -> list[dict[str, object]]:
+    fixture_path = Path(__file__).parent / "fixtures" / "ng_ndpa_synthetic.json"
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    assert payload["synthetic"] is True
+    cases = payload["cases"]
+    assert isinstance(cases, list)
+    assert all(isinstance(case, dict) for case in cases)
+    return cases
 
 
 def test_all_policy_literals_load_and_gdpr_alias_resolves():
@@ -150,6 +193,115 @@ def test_australia_privacy_act_profile_alias_and_lint_load():
     assert profile.keep_mapping is False
     assert profile.reversible_id is False
     assert lint_policy("australia_privacy_act") == ()
+
+
+def test_ng_ndpa_profile_loads_with_strict_sensitive_data_defaults():
+    profile = load_policy("ng_ndpa")
+
+    assert profile.name == "ng_ndpa"
+    assert "ng_ndpa" in list_policies()
+    assert profile.default_action == "replace"
+    assert profile.policy_label_actions == {
+        "DIRECT_IDENTIFIER": "replace",
+        "QUASI_IDENTIFIER": "mask",
+        "CLINICAL_CONCEPT": "mask",
+    }
+    assert profile.safety_sweep_mandatory is True
+    assert profile.keep_mapping is False
+    assert profile.reversible_id is False
+    assert profile.strict_no_leak is True
+    assert set(profile.actions) == set(CANONICAL_LABELS)
+
+    assert {
+        label: profile.action_for(label)
+        for label in (
+            "ID_NUM",
+            "ACCOUNT_NUMBER",
+            "EYE_COLOR",
+            "HEIGHT",
+            "CONDITION",
+            "GENE_SYMBOL",
+            "ORGANIZATION",
+            "OTHER",
+        )
+    } == {
+        "ID_NUM": "mask",
+        "ACCOUNT_NUMBER": "mask",
+        "EYE_COLOR": "mask",
+        "HEIGHT": "mask",
+        "CONDITION": "mask",
+        "GENE_SYMBOL": "mask",
+        "ORGANIZATION": "mask",
+        "OTHER": "mask",
+    }
+    assert lint_policy("ng_ndpa") == ()
+    lint_report = lint_policy_report("ng_ndpa")
+    assert lint_report["valid"] is True
+    assert lint_report["error_count"] == 0
+    assert lint_report["warning_count"] == 0
+
+
+def test_ng_ndpa_checklist_classes_have_non_keep_canonical_coverage():
+    profile = load_policy("ng_ndpa")
+    checklist_rows = _ng_ndpa_checklist_rows()
+
+    assert set(checklist_rows) == set(NDPA_SENSITIVE_DATA_CLASSES)
+    assert set(NDPA_SENSITIVE_CLASS_LABELS) == set(NDPA_SENSITIVE_DATA_CLASSES)
+
+    for ndpa_class, labels in checklist_rows.items():
+        assert labels
+        assert frozenset(labels) == NDPA_SENSITIVE_CLASS_LABELS[ndpa_class]
+        assert all(ndpa_class in ndpa_classes_for(label) for label in labels)
+        assert all(profile.action_for(label) != "keep" for label in labels)
+
+
+@pytest.mark.parametrize(
+    "case",
+    _ng_ndpa_fixture_cases(),
+    ids=lambda case: str(case["id"]),
+)
+def test_ng_ndpa_synthetic_fixtures_leave_zero_direct_identifiers(
+    monkeypatch,
+    case: dict[str, object],
+):
+    text = case["text"]
+    raw_detections = case["detections"]
+    assert isinstance(text, str)
+    assert isinstance(raw_detections, list)
+
+    detections: list[tuple[str, str]] = []
+    for detection in raw_detections:
+        assert isinstance(detection, dict)
+        surface = detection["surface"]
+        label = detection["label"]
+        assert isinstance(surface, str)
+        assert isinstance(label, str)
+        detections.append((surface, label))
+
+    entities = [_entity(text, surface, label, 0.99) for surface, label in detections]
+    _patch_extract_many(monkeypatch, entities)
+
+    result = deidentify(
+        text,
+        policy="ng_ndpa",
+        use_safety_sweep=False,
+        seed=42,
+    )
+    audit = deidentify(
+        text,
+        policy="ng_ndpa",
+        use_safety_sweep=False,
+        seed=42,
+        audit=True,
+    )
+
+    assert result.mapping is None
+    assert all(surface not in result.deidentified_text for surface, _ in detections)
+    assert result.metadata["safety_sweep"]["source"] == "safety_sweep"
+    assert audit.policy == "ng_ndpa"
+    assert audit.safety_sweep["enabled"] is True
+    assert audit.residual_risk["risk_report"]["leakage_rate"] == 0.0
+    assert all(span.action != "keep" for span in audit.spans)
 
 
 def test_canada_pipeda_masks_canadian_identifier_entities(monkeypatch):
