@@ -68,6 +68,8 @@ def _gen_email(faker, original, *, locale):
 
 
 def _gen_phone(faker, original, *, locale):
+    if locale in {"af_ZA", "en_ZA", "zu_ZA"} and hasattr(faker, "za_mobile_number"):
+        return faker.za_mobile_number(original)
     if any(ch.isdigit() for ch in original):
         return preserve_phone_format(original, rng=faker.random)
     return faker.phone_number()
@@ -161,6 +163,9 @@ def _gen_age(faker, original, *, locale):
 # When the locale-appropriate ID method exists, we call it; otherwise we
 # format-preserve the original.
 _LOCALE_ID_METHODS = {
+    "af_ZA": "south_african_id",
+    "en_ZA": "south_african_id",
+    "zu_ZA": "south_african_id",
     "pt_BR": "cpf",
     "pt_PT": "vat_id",
     "fr_FR": "ssn",
@@ -238,6 +243,8 @@ def _gen_id_num(faker, original, *, locale):
         return uscc
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
+        if method == "south_african_id":
+            return getattr(faker, method)(original)
         return getattr(faker, method)()
     return preserve_id_pattern(original, rng=faker.random)
 

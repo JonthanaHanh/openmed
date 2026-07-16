@@ -45,6 +45,7 @@ EXPECTED_VALIDATOR_KEYS = (
     ("pt", "cnpj"),
     ("tr", "tckn"),
     ("us", "npi"),
+    ("za", "sa_id_number"),
 )
 
 
@@ -73,6 +74,7 @@ ROUND_TRIP_CASES = (
     ("pt", "cnpj", "pt_BR"),
     ("tr", "tckn", "tr_TR"),
     ("us", "npi", "en_US"),
+    ("za", "sa_id_number", "zu_ZA"),
 )
 
 
@@ -128,6 +130,23 @@ class TestNationalIdRegistry:
             "en_IN",
             "aadhaar",
         )
+
+    def test_south_african_aliases_resolve_matching_specs(self):
+        country = get_national_id("za", "sa_id_number")
+        locale = get_national_id("en_ZA", "sa_id_number")
+        afrikaans = get_national_id("af", "sa_id_number")
+        zulu = get_national_id("zu", "sa_id_number")
+
+        assert country is not None
+        assert locale is not None
+        assert afrikaans is not None
+        assert zulu is not None
+        assert {spec.validate for spec in (country, locale, afrikaans, zulu)} == {
+            country.validate
+        }
+        assert {spec.faker_method for spec in (country, locale, afrikaans, zulu)} == {
+            "south_african_id"
+        }
 
     def test_unknown_lookup_returns_none(self):
         assert get_national_id("zz", "unknown") is None

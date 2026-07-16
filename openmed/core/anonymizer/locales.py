@@ -35,6 +35,7 @@ from typing import Final, Mapping
 # locales are backed by another installed Faker locale at runtime; see
 # ``FAKER_BACKEND_LOCALE``.
 LANG_TO_LOCALE: Final[Mapping[str, str]] = {
+    "af": "af_ZA",
     "en": "en_US",
     "fr": "fr_FR",
     "de": "de_DE",
@@ -66,18 +67,21 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "sr": "sr_RS",  # Faker has no Serbian locale; backed by hr_HR at runtime
     "hu": "hu_HU",
     "et": "et_EE",
+    "zu": "zu_ZA",
 }
 
 
 # Languages whose default locale is a known approximation rather than a
 # direct match. Used to emit a one-time warning so callers can override.
-_APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
+_APPROXIMATE_LOCALES: Final = frozenset({"af", "te", "ms", "sr"})
 
 
 # Conceptual locale -> installed Faker locale. This keeps national-ID dispatch
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
+    "af_ZA": "zu_ZA",
+    "en_ZA": "zu_ZA",
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
 }
@@ -95,6 +99,7 @@ FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
 # locale-aware dispatch (``registry._LOCALE_ID_METHODS``); the regression suite
 # asserts that and the round-trip.
 NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
+    "af": ("af_ZA", "south_african_id"),
     "en": ("en_US", "ssn"),
     "fr": ("fr_FR", "ssn"),  # NIR / INSEE
     "de": ("de_DE", "german_steuer_id"),  # Steuer-ID
@@ -123,6 +128,7 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
     "sr": ("sr_RS", "jmbg"),  # Serbian / ex-Yugoslav JMBG
     "hu": ("hu_HU", "hungarian_taj"),  # TAJ social-security identifier
     "et": ("et_EE", "isikukood"),  # Estonian isikukood
+    "zu": ("zu_ZA", "south_african_id"),
 }
 
 _warned: set[str] = set()

@@ -58,6 +58,8 @@ SUPPORTED_LANGUAGES: Set[str] = {
 # Languages with validator-backed national-ID coverage but no bundled default
 # PII model or full language pack yet.
 NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
+    "af",
+    "zu",
     "pl",
     "lv",
     "sk",
@@ -158,6 +160,52 @@ def validate_bic(text: str) -> bool:
 # ---------------------------------------------------------------------------
 # National ID Validators
 # ---------------------------------------------------------------------------
+
+
+def validate_south_african_id(text: str) -> bool:
+    """Validate a South African 13-digit identity number.
+
+    The identifier contains a ``YYMMDD`` birth date, a four-digit gender
+    sequence, a citizenship digit (``0`` for a citizen or ``1`` for a
+    permanent resident), one legacy classification digit, and a final Luhn
+    check digit. The two-digit year has no century marker, so calendar
+    validity is accepted when the date exists in either the 1900s or 2000s.
+
+    Args:
+        text: Candidate containing exactly 13 ASCII digits.
+
+    Returns:
+        ``True`` when the shape, embedded date, citizenship digit, and Luhn
+        checksum are all valid.
+    """
+    if not isinstance(text, str):
+        return False
+    digits = text.strip()
+    if re.fullmatch(r"[0-9]{13}", digits) is None:
+        return False
+
+    year = int(digits[:2])
+    month = int(digits[2:4])
+    day = int(digits[4:6])
+    valid_date = False
+    for century in (1900, 2000):
+        try:
+            date(century + year, month, day)
+        except ValueError:
+            continue
+        valid_date = True
+        break
+    if not valid_date or digits[10] not in {"0", "1"}:
+        return False
+
+    total = 0
+    for index, digit in enumerate(int(value) for value in digits):
+        if index % 2 == 1:
+            digit *= 2
+            if digit > 9:
+                digit -= 9
+        total += digit
+    return total % 10 == 0
 
 
 def validate_french_nir(text: str) -> bool:
@@ -1842,6 +1890,47 @@ def generate_mrz_td1(rng=None) -> str:
 # ---------------------------------------------------------------------------
 
 from .pii_entity_merger import PIIPattern  # noqa: E402
+
+_SOUTH_AFRICAN_PII_PATTERNS: List[PIIPattern] = [
+    # SA_ID_NUMBER: YYMMDD + gender sequence + citizenship/classification +
+    # Luhn check digit. A checksum-valid match is safe to sweep without context.
+    PIIPattern(
+        r"(?<![0-9])[0-9]{13}(?![0-9])",
+        "national_id",
+        priority=14,
+        base_score=0.75,
+        context_words=[
+            "south african id",
+            "south african identity number",
+            "sa id",
+            "id number",
+            "identity number",
+            "identiteitsnommer",
+            "inombolo kamazisi",
+        ],
+        context_boost=0.2,
+        validator=validate_south_african_id,
+    ),
+    # ZA_PHONE: South African mobile NSNs begin with 06x, 07x, or 08x.
+    # Accept domestic 0-prefixed and +27/plain-27 international forms.
+    PIIPattern(
+        r"(?<![0-9])(?:\+?27[\s.-]?[678][0-9]|0[678][0-9])"
+        r"[\s.-]?[0-9]{3}[\s.-]?[0-9]{4}(?![0-9])",
+        "phone_number",
+        priority=12,
+        base_score=0.7,
+        context_words=[
+            "phone",
+            "mobile",
+            "cell",
+            "telephone",
+            "contact",
+            "selfoon",
+            "umakhalekhukhwini",
+        ],
+        context_boost=0.25,
+    ),
+]
 
 _UK_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
     # UK NHS Number (10 digits, optional 3-3-4 spacing, Modulus 11 check).
@@ -4739,6 +4828,8 @@ _HUNGARIAN_PII_PATTERNS: List[PIIPattern] = [
 ]
 
 LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "af": _SOUTH_AFRICAN_PII_PATTERNS,
+    "zu": _SOUTH_AFRICAN_PII_PATTERNS,
     "fr": _FRENCH_PII_PATTERNS,
     "de": _GERMAN_PII_PATTERNS,
     "it": _ITALIAN_PII_PATTERNS,
@@ -4771,6 +4862,9 @@ LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
 }
 
 LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "en_za": _SOUTH_AFRICAN_PII_PATTERNS,
+    "af": _SOUTH_AFRICAN_PII_PATTERNS,
+    "zu": _SOUTH_AFRICAN_PII_PATTERNS,
     "en_gb": _UK_ENGLISH_PII_PATTERNS,
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,

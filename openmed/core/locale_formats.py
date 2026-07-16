@@ -261,6 +261,7 @@ LOCALE_DATE_ORDER: Final[Mapping[str, DateOrder]] = {
     "ko": "ymd",
     "tr": "dmy",
     # Backlog and national-ID-only locales.
+    "af": "dmy",
     "bg": "dmy",
     "bn": "dmy",
     "cs": "dmy",
@@ -287,6 +288,7 @@ LOCALE_DATE_ORDER: Final[Mapping[str, DateOrder]] = {
     "uk": "dmy",
     "vi": "dmy",
     "zh": "ymd",
+    "zu": "dmy",
 }
 
 _DOT_DECIMAL_COMMA_GROUPS: Final = NumberSeparators(".", (",",))
@@ -317,6 +319,7 @@ LOCALE_NUMBER_SEP: Final[Mapping[str, NumberSeparators]] = {
     "ko": _DOT_DECIMAL_COMMA_GROUPS,
     "tr": _COMMA_DECIMAL_DOT_GROUPS,
     # Backlog and national-ID-only locales.
+    "af": _COMMA_DECIMAL_SPACE_GROUPS,
     "bg": _COMMA_DECIMAL_SPACE_GROUPS,
     "bn": _DOT_DECIMAL_COMMA_GROUPS,
     "cs": _COMMA_DECIMAL_SPACE_GROUPS,
@@ -343,6 +346,7 @@ LOCALE_NUMBER_SEP: Final[Mapping[str, NumberSeparators]] = {
     "uk": _COMMA_DECIMAL_SPACE_GROUPS,
     "vi": _COMMA_DECIMAL_DOT_GROUPS,
     "zh": _DOT_DECIMAL_COMMA_GROUPS,
+    "zu": _DOT_DECIMAL_COMMA_GROUPS,
 }
 
 
