@@ -38,6 +38,8 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "en": "en_US",
     "fr": "fr_FR",
     "de": "de_DE",
+    "ha": "ha_NG",
+    "ig": "ig_NG",
     "it": "it_IT",
     "es": "es_ES",
     "nl": "nl_NL",
@@ -49,6 +51,7 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "ja": "ja_JP",
     "zh": "zh_CN",  # CJK PERSON spans draw family-name-first Chinese surrogates
     "tr": "tr_TR",
+    "yo": "yo_NG",
     "id": "id_ID",
     "th": "th_TH",
     "pl": "pl_PL",
@@ -98,6 +101,8 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
     "en": ("en_US", "ssn"),
     "fr": ("fr_FR", "ssn"),  # NIR / INSEE
     "de": ("de_DE", "german_steuer_id"),  # Steuer-ID
+    "ha": ("ha_NG", "nigeria_nin"),  # Nigerian NIN
+    "ig": ("ig_NG", "nigeria_nin"),  # Nigerian NIN
     "it": ("it_IT", "ssn"),  # Codice Fiscale
     "es": ("es_ES", "nie"),  # NIE
     "nl": ("nl_NL", "ssn"),  # BSN
@@ -105,6 +110,7 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
     "te": ("en_IN", "aadhaar"),  # Aadhaar via approximate en_IN
     "pt": ("pt_BR", "cpf"),  # CPF (registered validators are Brazilian)
     "tr": ("tr_TR", "ssn"),  # TCKN
+    "yo": ("yo_NG", "nigeria_nin"),  # Nigerian NIN
     "he": ("he_IL", "teudat_zehut"),  # Israeli Teudat Zehut
     "id": ("id_ID", "indonesian_nik"),  # NIK
     "th": ("th_TH", "thai_national_id"),  # Thai 13-digit national ID
