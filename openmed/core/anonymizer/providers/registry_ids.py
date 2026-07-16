@@ -35,6 +35,7 @@ from openmed.core.pii_i18n import (
     validate_czechoslovak_rodne_cislo,
     validate_danish_cpr,
     validate_dutch_bsn,
+    validate_egyptian_national_id,
     validate_estonian_isikukood,
     validate_finnish_hetu,
     validate_french_nir,
@@ -47,6 +48,7 @@ from openmed.core.pii_i18n import (
     validate_korean_rrn,
     validate_latvian_personas_kods,
     validate_malaysian_mykad,
+    validate_moroccan_cin,
     validate_philhealth_pin,
     validate_philsys_psn,
     validate_polish_pesel,
@@ -69,6 +71,7 @@ from .clinical_ids import (
     BulgarianEgnProvider,
     CanadianSINProvider,
     DanishCPRProvider,
+    EgyptMoroccoIdProvider,
     EstonianIsikukoodProvider,
     GermanSteuerIdProvider,
     HungarianTAJProvider,
@@ -233,6 +236,20 @@ def _register_aliases(
 
 
 def _register_builtin_specs() -> None:
+    _register_aliases(
+        ("eg", "ar", "ar_EG"),
+        id_type="egyptian_national_id",
+        validate=validate_egyptian_national_id,
+        faker_method="egyptian_national_id",
+        faker_provider=EgyptMoroccoIdProvider,
+    )
+    _register_aliases(
+        ("ma", "ar_MA", "fr_MA"),
+        id_type="moroccan_cin",
+        validate=validate_moroccan_cin,
+        faker_method="moroccan_cin",
+        faker_provider=EgyptMoroccoIdProvider,
+    )
     _register_aliases(
         ("fr", "fr_FR"),
         id_type="nir",

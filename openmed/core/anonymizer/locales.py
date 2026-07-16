@@ -78,6 +78,8 @@ _APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
+    "ar_MA": "ar_EG",
+    "fr_MA": "fr_FR",
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
 }

@@ -45,6 +45,8 @@ EXPECTED_VALIDATOR_KEYS = (
     ("pt", "cnpj"),
     ("tr", "tckn"),
     ("us", "npi"),
+    ("eg", "egyptian_national_id"),
+    ("ma", "moroccan_cin"),
 )
 
 
@@ -73,6 +75,8 @@ ROUND_TRIP_CASES = (
     ("pt", "cnpj", "pt_BR"),
     ("tr", "tckn", "tr_TR"),
     ("us", "npi", "en_US"),
+    ("eg", "egyptian_national_id", "ar_EG"),
+    ("ma", "moroccan_cin", "ar_MA"),
 )
 
 
@@ -128,6 +132,34 @@ class TestNationalIdRegistry:
             "en_IN",
             "aadhaar",
         )
+
+    @pytest.mark.parametrize(
+        ("aliases", "id_type", "faker_method"),
+        (
+            (
+                ("eg", "ar", "ar_EG"),
+                "egyptian_national_id",
+                "egyptian_national_id",
+            ),
+            (("ma", "ar_MA", "fr_MA"), "moroccan_cin", "moroccan_cin"),
+        ),
+    )
+    def test_egypt_morocco_aliases_resolve_working_specs(
+        self,
+        aliases,
+        id_type,
+        faker_method,
+    ):
+        specs = [get_national_id(alias, id_type) for alias in aliases]
+        assert all(spec is not None for spec in specs)
+        assert {spec.validate for spec in specs} == {specs[0].validate}
+        assert {spec.faker_method for spec in specs} == {faker_method}
+
+        faker = Faker("ar_EG")
+        register_clinical_providers(faker)
+        faker.seed_instance(842)
+        surrogate = getattr(faker, faker_method)()
+        assert specs[0].validate(surrogate)
 
     def test_unknown_lookup_returns_none(self):
         assert get_national_id("zz", "unknown") is None

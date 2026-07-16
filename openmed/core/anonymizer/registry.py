@@ -161,6 +161,9 @@ def _gen_age(faker, original, *, locale):
 # When the locale-appropriate ID method exists, we call it; otherwise we
 # format-preserve the original.
 _LOCALE_ID_METHODS = {
+    "ar_EG": "egyptian_national_id",
+    "ar_MA": "moroccan_cin",
+    "fr_MA": "moroccan_cin",
     "pt_BR": "cpf",
     "pt_PT": "vat_id",
     "fr_FR": "ssn",
@@ -238,6 +241,8 @@ def _gen_id_num(faker, original, *, locale):
         return uscc
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
+        if method in {"egyptian_national_id", "moroccan_cin"}:
+            return getattr(faker, method)(original)
         return getattr(faker, method)()
     return preserve_id_pattern(original, rng=faker.random)
 
