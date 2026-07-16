@@ -53,6 +53,7 @@ SUPPORTED_LANGUAGES: Set[str] = {
     "th",
     "ko",
     "ro",
+    "sw",
 }
 
 # Languages with validator-backed national-ID coverage but no bundled default
@@ -91,6 +92,7 @@ LANGUAGE_NAMES: Dict[str, str] = {
     "th": "Thai",
     "ko": "Korean",
     "ro": "Romanian",
+    "sw": "Swahili",
 }
 
 LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
@@ -111,6 +113,7 @@ LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
     "th": "Thai-",
     "ko": "Korean-",
     "ro": "Romanian-",
+    "sw": "Swahili-",
 }
 
 DEFAULT_PII_MODELS: Dict[str, str] = {
@@ -131,6 +134,7 @@ DEFAULT_PII_MODELS: Dict[str, str] = {
     "th": "OpenMed/privacy-filter-multilingual",
     "ko": "OpenMed/OpenMed-PII-Korean-NomicMed-Large-395M-v1",
     "ro": "OpenMed/privacy-filter-multilingual",
+    "sw": "OpenMed/privacy-filter-multilingual",
 }
 
 
@@ -1642,6 +1646,20 @@ LANGUAGE_MONTH_NAMES: Dict[str, List[str]] = {
         "Oktober",
         "November",
         "Disember",
+    ],
+    "sw": [
+        "Januari",
+        "Februari",
+        "Machi",
+        "Aprili",
+        "Mei",
+        "Juni",
+        "Julai",
+        "Agosti",
+        "Septemba",
+        "Oktoba",
+        "Novemba",
+        "Desemba",
     ],
     "th": [
         "มกราคม",
@@ -4301,6 +4319,176 @@ _TAGALOG_PII_PATTERNS: List[PIIPattern] = [
 ]
 
 
+_SWAHILI_MONTH_PATTERN = (
+    r"Januari|Februari|Machi|Aprili|Mei|Juni|Julai|Agosti|Septemba|"
+    r"Oktoba|Novemba|Desemba"
+)
+
+_SWAHILI_DATE_CONTEXT = [
+    "tarehe",
+    "tarehe ya kuzaliwa",
+    "alizaliwa",
+    "kuzaliwa",
+    "date",
+    "date of birth",
+    "dob",
+    "born",
+    "admitted",
+    "discharged",
+]
+
+_SWAHILI_AGE_CONTEXT = [
+    "umri",
+    "umri wa miaka",
+    "miaka",
+    "age",
+    "aged",
+    "years old",
+]
+
+_SWAHILI_ID_CONTEXT = [
+    "nambari ya kitambulisho",
+    "namba ya kitambulisho",
+    "kitambulisho",
+    "nambari ya nida",
+    "namba ya nida",
+    "nida",
+    "national id",
+    "national identification number",
+    "identity number",
+    "id number",
+    "id no",
+]
+
+_SWAHILI_NHIF_CONTEXT = [
+    "nambari ya nhif",
+    "namba ya nhif",
+    "nhif nambari",
+    "nhif namba",
+    "nhif",
+    "nhif number",
+    "nhif member number",
+    "member number",
+    "health insurance number",
+]
+
+_SWAHILI_PHONE_CONTEXT = [
+    "simu",
+    "nambari ya simu",
+    "namba ya simu",
+    "piga simu",
+    "wasiliana",
+    "phone",
+    "phone number",
+    "mobile",
+    "call",
+    "contact",
+]
+
+_SWAHILI_NAME_CONTEXT = [
+    "jina",
+    "jina la mgonjwa",
+    "mgonjwa",
+    "name",
+    "patient name",
+    "patient",
+]
+
+_SWAHILI_PII_PATTERNS: List[PIIPattern] = [
+    # Explicitly labelled names are safe to sweep without guessing which
+    # capitalised words in a Latin-script, code-mixed note denote a person.
+    PIIPattern(
+        r"(?:(?<=Jina: )|(?<=Name: )|(?<=Jina la mgonjwa: )|"
+        r"(?<=Patient name: ))[A-Z][A-Za-z'’-]{1,30}"
+        r"(?:\s+[A-Z][A-Za-z'’-]{1,30}){1,3}\b",
+        "name",
+        priority=12,
+        base_score=0.65,
+        context_words=_SWAHILI_NAME_CONTEXT,
+        context_boost=0.3,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
+        "date",
+        priority=9,
+        base_score=0.6,
+        context_words=_SWAHILI_DATE_CONTEXT,
+        context_boost=0.3,
+    ),
+    PIIPattern(
+        rf"\b\d{{1,2}}\s+(?:{_SWAHILI_MONTH_PATTERN})\s+\d{{4}}\b",
+        "date",
+        priority=8,
+        base_score=0.7,
+        context_words=_SWAHILI_DATE_CONTEXT,
+        context_boost=0.25,
+        flags=re.IGNORECASE,
+    ),
+    # Match only ages immediately attached to a bilingual age cue. A generic
+    # one-to-three-digit pattern would over-redact labs elsewhere in the note.
+    PIIPattern(
+        r"(?:(?<=Umri: )|(?<=Age: )|(?<=Umri wa miaka )|(?<=Aged ))"
+        r"(?:1[01]\d|[1-9]?\d)\b",
+        "age",
+        priority=11,
+        base_score=0.65,
+        context_words=_SWAHILI_AGE_CONTEXT,
+        context_boost=0.3,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE,
+    ),
+    # Kenya's legacy national ID has no public checksum. Its common eight-digit
+    # shape therefore requires nearby Swahili or English identity context.
+    PIIPattern(
+        r"(?<!\d)\d{8}(?!\d)",
+        "national_id",
+        priority=14,
+        base_score=0.5,
+        context_words=_SWAHILI_ID_CONTEXT,
+        context_boost=0.45,
+        safety_sweep_requires_context=True,
+    ),
+    # This offline pack has no checksum validation for NHIF member numbers.
+    # Restrict recognition to explicitly labelled six-to-ten-digit values to
+    # avoid treating clinical measurements as IDs.
+    PIIPattern(
+        r"(?<!\d)\d{6,10}(?!\d)",
+        "national_id",
+        priority=13,
+        base_score=0.5,
+        context_words=_SWAHILI_NHIF_CONTEXT,
+        context_boost=0.45,
+        safety_sweep_requires_context=True,
+    ),
+    # Tanzanian NIDA NIN: format-only recognition of the 20-digit value,
+    # including its commonly grouped 8-5-5-2 rendering. No checksum is claimed.
+    PIIPattern(
+        r"(?<!\d)\d{8}(?P<nida_sep>[ -]?)\d{5}(?P=nida_sep)"
+        r"\d{5}(?P=nida_sep)\d{2}(?!\d)",
+        "national_id",
+        priority=15,
+        base_score=0.5,
+        context_words=_SWAHILI_ID_CONTEXT,
+        context_boost=0.45,
+        safety_sweep_requires_context=True,
+    ),
+    # East African mobile numbers in international form for Kenya, Tanzania,
+    # and Uganda. Each has a nine-digit national significant number.
+    PIIPattern(
+        r"(?<!\d)\+(?:254[\s.-]?(?:1|7)\d{2}|"
+        r"255[\s.-]?[67]\d{2}|256[\s.-]?7\d{2})"
+        r"[\s.-]?\d{3}[\s.-]?\d{3}(?!\d)",
+        "phone_number",
+        priority=12,
+        base_score=0.7,
+        context_words=_SWAHILI_PHONE_CONTEXT,
+        context_boost=0.25,
+    ),
+]
+
+
 _DANISH_MONTH_PATTERN = (
     r"januar|februar|marts|april|maj|juni|juli|august|september|"
     r"oktober|november|december"
@@ -4759,6 +4947,7 @@ LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "sk": _SLOVAK_PII_PATTERNS,
     "ms": _MALAY_PII_PATTERNS,
     "tl": _TAGALOG_PII_PATTERNS,
+    "sw": _SWAHILI_PII_PATTERNS,
     "da": _DANISH_PII_PATTERNS,
     "ro": _ROMANIAN_PII_PATTERNS,
     "fi": _FINNISH_PII_PATTERNS,
@@ -5147,6 +5336,34 @@ LANGUAGE_FAKE_DATA: Dict[str, Dict[str, List[str]]] = {
         "AGE": ["45", "62", "38"],
         "LOCATION": ["Manila", "Quezon City", "Cebu City"],
         "ZIPCODE": ["1000", "1100", "6000"],
+    },
+    "sw": {
+        "NAME": [
+            "Amina Hassan",
+            "Daniel Otieno",
+            "Wanjiku Njeri",
+            "Baraka Mushi",
+        ],
+        "FIRST_NAME": ["Amina", "Daniel", "Wanjiku", "Baraka"],
+        "LAST_NAME": ["Hassan", "Otieno", "Njeri", "Mushi"],
+        "EMAIL": ["mgonjwa@example.ke", "mawasiliano@example.tz"],
+        "PHONE": [
+            "+254 712 345 678",
+            "+255 754 321 098",
+            "+256 772 456 789",
+        ],
+        "ID_NUM": [
+            "12345678",
+            "987654321",
+            "19791103-12345-67890-12",
+        ],
+        "STREET_ADDRESS": ["Kenyatta Avenue 12", "Barabara ya Nyerere 45"],
+        "URL_PERSONAL": ["https://example.ke"],
+        "USERNAME": ["mgonjwa123", "mtumiaji456"],
+        "DATE": ["14/05/1988", "3 Novemba 1979"],
+        "AGE": ["29", "38", "47"],
+        "LOCATION": ["Nairobi", "Dar es Salaam", "Kampala", "Mombasa"],
+        "ZIPCODE": ["00100", "11101", "256"],
     },
     "da": {
         "NAME": ["Anna Nielsen", "Peter Jensen", "Mette Hansen", "Lars Andersen"],

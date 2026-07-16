@@ -66,6 +66,7 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "sr": "sr_RS",  # Faker has no Serbian locale; backed by hr_HR at runtime
     "hu": "hu_HU",
     "et": "et_EE",
+    "sw": "sw",
 }
 
 

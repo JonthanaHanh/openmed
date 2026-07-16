@@ -50,6 +50,7 @@ SUPPORTED_LOCALE_PHI_LANGUAGES: Final[tuple[str, ...]] = (
     "th",
     "ko",
     "ro",
+    "sw",
 )
 
 LOCALE_PHI_LABELS: Final[tuple[str, ...]] = (
@@ -234,6 +235,15 @@ _TEMPLATES: Final[Mapping[str, tuple[str, ...]]] = {
         ". Telefon ",
         ". Adresa ",
         ". Control la ",
+        ".",
+    ),
+    "sw": (
+        "Dokezo la kliniki: mgonjwa ",
+        " alizaliwa tarehe ",
+        ". Nambari ya mgonjwa ",
+        ". Simu ",
+        ". Anwani ",
+        ". Tarehe ya ufuatiliaji ",
         ".",
     ),
 }

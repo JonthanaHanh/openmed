@@ -26,7 +26,8 @@ export type PIILanguage =
   | "id"
   | "th"
   | "ko"
-  | "ro";
+  | "ro"
+  | "sw";
 
 export type DeidentificationMethod =
   | "mask"

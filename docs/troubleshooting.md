@@ -383,11 +383,11 @@ text = validate_input(user_supplied_text, max_length=2000, allow_empty=False)
 **Symptom.** A PII call with an unrecognized `lang` raises:
 
 ```text
-ValueError: Unsupported language 'xx'. Supported: ['ar', 'de', 'en', 'es', 'fr', 'he', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pt', 'ro', 'te', 'th', 'tr']
+ValueError: Unsupported language 'xx'. Supported: ['ar', 'de', 'en', 'es', 'fr', 'he', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pt', 'ro', 'sw', 'te', 'th', 'tr']
 ```
 
-**Cause.** PII extraction and de-identification support **17 supported PII language codes: ar, de, en, es,
-fr, he, hi, id, it, ja, ko, nl, pt, ro, te, th, and tr**. Passing anything outside that set (or a mistyped
+**Cause.** PII extraction and de-identification support **18 supported PII language codes: ar, de, en, es,
+fr, he, hi, id, it, ja, ko, nl, pt, ro, sw, te, th, and tr**. Passing anything outside that set (or a mistyped
 code) raises this error.
 
 **Fix.** Use one of the supported codes with `extract_pii(..., lang="<code>")`. Clinical NER coverage depends
