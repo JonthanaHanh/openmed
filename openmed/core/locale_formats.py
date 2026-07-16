@@ -286,7 +286,9 @@ LOCALE_DATE_ORDER: Final[Mapping[str, DateOrder]] = {
     "et": "dmy",
     "uk": "dmy",
     "vi": "dmy",
+    "xh": "dmy",
     "zh": "ymd",
+    "zu": "dmy",
 }
 
 _DOT_DECIMAL_COMMA_GROUPS: Final = NumberSeparators(".", (",",))
@@ -342,7 +344,9 @@ LOCALE_NUMBER_SEP: Final[Mapping[str, NumberSeparators]] = {
     "et": _COMMA_DECIMAL_SPACE_GROUPS,
     "uk": _COMMA_DECIMAL_SPACE_GROUPS,
     "vi": _COMMA_DECIMAL_DOT_GROUPS,
+    "xh": _DOT_DECIMAL_COMMA_GROUPS,
     "zh": _DOT_DECIMAL_COMMA_GROUPS,
+    "zu": _DOT_DECIMAL_COMMA_GROUPS,
 }
 
 

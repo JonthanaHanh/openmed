@@ -27,6 +27,7 @@ deterministic:
   - Philippine PhilSys PSN and PhilHealth PIN structural formats
   - Danish CPR / personnummer with a decodable embedded birth date
   - Thai national ID (13 digits with a weighted mod-11 checksum)
+  - South African ID (13 digits with an embedded birth date and Luhn checksum)
   - Polish PESEL, Latvian personas kods, South Korean RRN, and Slovak rodne
     cislo
   - UK NHS Number, a patient health identifier validated with the NHS
@@ -703,6 +704,49 @@ class NPIProvider(BaseProvider):
 
     def npi(self) -> str:
         return generate_npi(rng=self.generator.random)
+
+
+# ---------------------------------------------------------------------------
+# South African identity number (YYMMDDSSSSCAZ with a Luhn check digit)
+# ---------------------------------------------------------------------------
+
+
+def generate_za_id_number(*, rng: random.Random | None = None) -> str:
+    """Generate a South African ID accepted by ``validate_za_id_number``.
+
+    The result contains a non-future birth date, a four-digit sequence, a
+    citizenship digit in ``{0, 1}``, a legacy classification digit, and a
+    Luhn check digit. The output is fully synthetic and uses only the supplied
+    deterministic random source.
+
+    Args:
+        rng: Optional deterministic random source.
+
+    Returns:
+        A checksum-valid 13-digit South African identity number.
+    """
+    source = rng or random.Random()
+    first_birth_date = date(1940, 1, 1)
+    birth_date = date.fromordinal(
+        source.randint(first_birth_date.toordinal(), date.today().toordinal())
+    )
+    sequence = source.randint(0, 9999)
+    citizenship = source.randint(0, 1)
+    classification = source.randint(0, 9)
+    body = (
+        f"{birth_date.year % 100:02d}{birth_date.month:02d}{birth_date.day:02d}"
+        f"{sequence:04d}{citizenship}{classification}"
+    )
+    check_digit = _luhn_check_digit([int(digit) for digit in body])
+    return body + str(check_digit)
+
+
+class SouthAfricanIdProvider(BaseProvider):
+    """Generates South African identity numbers with valid Luhn checksums."""
+
+    def south_african_id(self) -> str:
+        """Return a synthetic 13-digit South African identity number."""
+        return generate_za_id_number(rng=self.generator.random)
 
 
 # ---------------------------------------------------------------------------
@@ -1871,6 +1915,7 @@ __all__ = [
     "RomanianCNPProvider",
     "RodneCisloProvider",
     "SerbianJmbgProvider",
+    "SouthAfricanIdProvider",
     "ThaiNationalIdProvider",
     "SpanishDNIProvider",
     "SpanishNIEProvider",
@@ -1902,6 +1947,7 @@ __all__ = [
     "generate_romanian_cnp",
     "generate_spanish_nie",
     "generate_ssn",
+    "generate_za_id_number",
     "generate_thai_national_id",
     "generate_uk_nhs_number",
     "generate_unified_social_credit_code",

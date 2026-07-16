@@ -20,6 +20,7 @@ from openmed.core.pii_i18n import (
     validate_spanish_nie,
     validate_thai_national_id,
     validate_turkish_tckn,
+    validate_za_id_number,
 )
 from openmed.training.synthetic import (
     LOCALE_PHI_LABELS,
@@ -44,6 +45,8 @@ _ID_VALIDATORS = {
     "th": validate_thai_national_id,
     "ko": validate_korean_rrn,
     "ro": validate_romanian_cnp,
+    "zu": validate_za_id_number,
+    "xh": validate_za_id_number,
 }
 
 _SCRIPT_RANGES = {

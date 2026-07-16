@@ -66,12 +66,14 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "sr": "sr_RS",  # Faker has no Serbian locale; backed by hr_HR at runtime
     "hu": "hu_HU",
     "et": "et_EE",
+    "zu": "zu_ZA",
+    "xh": "xh_ZA",  # Faker has no isiXhosa locale; backed by zu_ZA at runtime
 }
 
 
 # Languages whose default locale is a known approximation rather than a
 # direct match. Used to emit a one-time warning so callers can override.
-_APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
+_APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr", "xh"})
 
 
 # Conceptual locale -> installed Faker locale. This keeps national-ID dispatch
@@ -80,6 +82,7 @@ _APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
+    "xh_ZA": "zu_ZA",
 }
 
 
@@ -123,6 +126,8 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
     "sr": ("sr_RS", "jmbg"),  # Serbian / ex-Yugoslav JMBG
     "hu": ("hu_HU", "hungarian_taj"),  # TAJ social-security identifier
     "et": ("et_EE", "isikukood"),  # Estonian isikukood
+    "zu": ("zu_ZA", "south_african_id"),
+    "xh": ("xh_ZA", "south_african_id"),
 }
 
 _warned: set[str] = set()

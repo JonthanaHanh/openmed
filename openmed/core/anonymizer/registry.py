@@ -131,6 +131,8 @@ _DAY_FIRST_LOCALES = frozenset(
         "th_TH",
         "cs_CZ",
         "sk_SK",
+        "zu_ZA",
+        "xh_ZA",
     }
 )
 
@@ -191,6 +193,8 @@ _LOCALE_ID_METHODS = {
     "sr_RS": "jmbg",
     "hu_HU": "hungarian_taj",
     "et_EE": "isikukood",
+    "zu_ZA": "south_african_id",
+    "xh_ZA": "south_african_id",
 }
 
 
