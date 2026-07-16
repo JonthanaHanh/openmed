@@ -49,6 +49,17 @@ PUBLIC_DATASET_LICENSES: Mapping[str, DatasetLicense] = {
             "archive locally and stores no corpus rows in the repository."
         ),
     ),
+    "masakhaner": DatasetLicense(
+        dataset="masakhaner",
+        license_id="CC-BY-NC-4.0",
+        source_url="https://huggingface.co/datasets/masakhane/masakhaner2",
+        redistribution="user-supplied only",
+        notes=(
+            "MasakhaNER 2.0 corpus data is non-commercial and is never bundled, "
+            "downloaded, mirrored, or redistributed by OpenMed. Loading requires "
+            "explicit license acceptance."
+        ),
+    ),
     "medmentions": DatasetLicense(
         dataset="medmentions",
         license_id="CC0-1.0",
