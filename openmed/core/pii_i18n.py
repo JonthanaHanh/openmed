@@ -71,6 +71,7 @@ NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
     "bg",
     "fi",
     "cs",
+    "sw",
 }
 
 LANGUAGE_NAMES: Dict[str, str] = {
@@ -158,6 +159,104 @@ def validate_bic(text: str) -> bool:
 # ---------------------------------------------------------------------------
 # National ID Validators
 # ---------------------------------------------------------------------------
+
+
+_GHANA_CARD_CHECK_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def ghana_card_check_char(prefix: str, serial: str) -> str:
+    """Return the ISO 7064 MOD 37,36 Ghana Card check character.
+
+    The calculation covers the unhyphenated three-letter country prefix and
+    nine-digit serial. The resulting character is an ASCII digit or uppercase
+    letter.
+
+    Args:
+        prefix: Three-letter ICAO country code from the card PIN.
+        serial: Nine-digit system-generated card serial.
+
+    Returns:
+        The single alphanumeric check character.
+
+    Raises:
+        ValueError: If ``prefix`` or ``serial`` has the wrong shape.
+    """
+    normalized_prefix = prefix.strip().upper()
+    normalized_serial = serial.strip()
+    if re.fullmatch(r"[A-Z]{3}", normalized_prefix) is None:
+        raise ValueError("Ghana Card prefix must contain three ASCII letters")
+    if re.fullmatch(r"[0-9]{9}", normalized_serial) is None:
+        raise ValueError("Ghana Card serial must contain nine ASCII digits")
+
+    alphabet = _GHANA_CARD_CHECK_ALPHABET
+    modulus = len(alphabet)
+    checksum = modulus // 2
+    for char in normalized_prefix + normalized_serial:
+        checksum = (
+            ((checksum or modulus) * 2) % (modulus + 1) + alphabet.index(char)
+        ) % modulus
+    value = (1 - ((checksum or modulus) * 2) % (modulus + 1)) % modulus
+    return alphabet[value]
+
+
+def validate_ghana_card_pin(text: str) -> bool:
+    """Validate a Ghana Card PIN and its alphanumeric check character.
+
+    Ghanaian cards use the ``GHA-#########-C`` form. Resident cards retain the
+    holder's three-letter ICAO nationality prefix, so any ASCII-letter prefix
+    is accepted when the complete PIN passes the check-character calculation.
+
+    Args:
+        text: Candidate Ghana Card PIN.
+
+    Returns:
+        ``True`` when the shape and check character are valid.
+    """
+    if not isinstance(text, str):
+        return False
+    match = re.fullmatch(
+        r"([A-Z]{3})-([0-9]{9})-([A-Z0-9])",
+        text.strip().upper(),
+    )
+    if match is None:
+        return False
+    prefix, serial, check_char = match.groups()
+    return check_char == ghana_card_check_char(prefix, serial)
+
+
+def validate_kenya_national_id(text: str) -> bool:
+    """Validate the offline structure of a legacy Kenyan national ID.
+
+    Kenya's second-generation identity numbers contain seven or eight digits
+    and have no public checksum. Recognition therefore requires identity
+    context at the pattern layer.
+
+    Args:
+        text: Candidate containing exactly seven or eight ASCII digits.
+
+    Returns:
+        ``True`` when the candidate has the expected structure.
+    """
+    return (
+        isinstance(text, str) and re.fullmatch(r"[0-9]{7,8}", text.strip()) is not None
+    )
+
+
+def validate_kenya_maisha_namba(text: str) -> bool:
+    """Validate the offline 14-digit structure of a Kenya Maisha Namba.
+
+    The identifier has no public checksum, so recognition also requires nearby
+    Maisha, Huduma, or UPI context at the pattern layer.
+
+    Args:
+        text: Candidate containing exactly 14 ASCII digits.
+
+    Returns:
+        ``True`` when the candidate has the expected structure.
+    """
+    return (
+        isinstance(text, str) and re.fullmatch(r"[0-9]{14}", text.strip()) is not None
+    )
 
 
 def validate_french_nir(text: str) -> bool:
@@ -1842,6 +1941,70 @@ def generate_mrz_td1(rng=None) -> str:
 # ---------------------------------------------------------------------------
 
 from .pii_entity_merger import PIIPattern  # noqa: E402
+
+_GHANA_CARD_PII_PATTERNS: List[PIIPattern] = [
+    # GH_GHANA_CARD: country prefix + nine-digit serial + ISO 7064 check
+    # character. The checksum is strong enough for deterministic sweeping.
+    PIIPattern(
+        r"(?<![A-Z0-9])[A-Z]{3}-[0-9]{9}-[A-Z0-9](?![A-Z0-9])",
+        "national_id",
+        priority=15,
+        base_score=0.8,
+        context_words=[
+            "ghana card",
+            "ghana card pin",
+            "national identification authority",
+            "nia pin",
+        ],
+        context_boost=0.15,
+        validator=validate_ghana_card_pin,
+    ),
+]
+
+
+_KENYA_ID_PII_PATTERNS: List[PIIPattern] = [
+    # KE_MAISHA_NAMBA: structural UPI with mandatory nearby identifier context.
+    PIIPattern(
+        r"(?<![0-9])[0-9]{14}(?![0-9])",
+        "national_id",
+        priority=15,
+        base_score=0.5,
+        context_words=[
+            "maisha namba",
+            "maisha number",
+            "maisha card",
+            "huduma namba",
+            "huduma number",
+            "unique personal identifier",
+            "upi number",
+            "nambari ya maisha",
+        ],
+        context_boost=0.45,
+        validator=validate_kenya_maisha_namba,
+        safety_sweep_requires_context=True,
+    ),
+    # KE_NATIONAL_ID: legacy seven/eight-digit number. Without an identity
+    # keyword this shape is too common in labs, MRNs, and other clinical data.
+    PIIPattern(
+        r"(?<![0-9])[0-9]{7,8}(?![0-9])",
+        "national_id",
+        priority=14,
+        base_score=0.5,
+        context_words=[
+            "id no",
+            "id number",
+            "national id",
+            "national identification number",
+            "identity card number",
+            "kitambulisho",
+            "nambari ya kitambulisho",
+            "nambari ya id",
+        ],
+        context_boost=0.45,
+        validator=validate_kenya_national_id,
+        safety_sweep_requires_context=True,
+    ),
+]
 
 _UK_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
     # UK NHS Number (10 digits, optional 3-3-4 spacing, Modulus 11 check).
@@ -4739,6 +4902,7 @@ _HUNGARIAN_PII_PATTERNS: List[PIIPattern] = [
 ]
 
 LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "sw": _KENYA_ID_PII_PATTERNS,
     "fr": _FRENCH_PII_PATTERNS,
     "de": _GERMAN_PII_PATTERNS,
     "it": _ITALIAN_PII_PATTERNS,
@@ -4771,6 +4935,9 @@ LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
 }
 
 LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "en_gh": _GHANA_CARD_PII_PATTERNS,
+    "en_ke": _KENYA_ID_PII_PATTERNS,
+    "sw": _KENYA_ID_PII_PATTERNS,
     "en_gb": _UK_ENGLISH_PII_PATTERNS,
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,

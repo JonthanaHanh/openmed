@@ -27,6 +27,7 @@ deterministic:
   - Philippine PhilSys PSN and PhilHealth PIN structural formats
   - Danish CPR / personnummer with a decodable embedded birth date
   - Thai national ID (13 digits with a weighted mod-11 checksum)
+  - Ghana Card PIN and Kenyan legacy/Maisha identity numbers
   - Polish PESEL, Latvian personas kods, South Korean RRN, and Slovak rodne
     cislo
   - UK NHS Number, a patient health identifier validated with the NHS
@@ -703,6 +704,117 @@ class NPIProvider(BaseProvider):
 
     def npi(self) -> str:
         return generate_npi(rng=self.generator.random)
+
+
+# ---------------------------------------------------------------------------
+# Ghana Card PIN and Kenyan identity numbers
+# ---------------------------------------------------------------------------
+
+
+def _numeric_surrogate(
+    original: str | None,
+    *,
+    length: int,
+    rng: random.Random,
+) -> str:
+    """Return a deterministic numeric surrogate distinct from ``original``."""
+    original_text = (original or "").strip()
+    candidate = ""
+    for _ in range(100):
+        candidate = "".join(str(rng.randint(0, 9)) for _ in range(length))
+        if candidate != original_text:
+            return candidate
+
+    value = (int(candidate or "0") + 1) % (10**length)
+    candidate = f"{value:0{length}d}"
+    if candidate == original_text:  # pragma: no cover - defensive wraparound
+        candidate = f"{(value + 1) % (10**length):0{length}d}"
+    return candidate
+
+
+def generate_ghana_card_pin(
+    original: str | None = None,
+    *,
+    rng: random.Random | None = None,
+) -> str:
+    """Generate a checksum-valid Ghana Card PIN surrogate.
+
+    A valid source's ICAO prefix is retained; otherwise ``GHA`` is used. The
+    generated presentation always preserves both hyphens and uses a numeric
+    check character, matching the common ``GHA-#########-#`` card form.
+
+    Args:
+        original: Optional source PIN whose country prefix should be retained.
+        rng: Optional deterministic random source.
+
+    Returns:
+        A distinct checksum-valid Ghana Card PIN.
+    """
+    from openmed.core.pii_i18n import ghana_card_check_char
+
+    source = rng or random.Random()
+    original_text = (original or "").strip().upper()
+    match = re.fullmatch(r"([A-Z]{3})-[0-9]{9}-[A-Z0-9]", original_text)
+    prefix = match.group(1) if match is not None else "GHA"
+
+    serial = ""
+    for _ in range(200):
+        serial = "".join(str(source.randint(0, 9)) for _ in range(9))
+        check_char = ghana_card_check_char(prefix, serial)
+        candidate = f"{prefix}-{serial}-{check_char}"
+        if check_char.isdigit() and candidate != original_text:
+            return candidate
+
+    # A hostile RNG can repeat one serial forever. Walk the serial space until
+    # an alphanumeric checksum lands on a digit and differs from the source.
+    value = int(serial or "0")
+    for offset in range(1, 1_000):
+        fallback_serial = f"{(value + offset) % 1_000_000_000:09d}"
+        check_char = ghana_card_check_char(prefix, fallback_serial)
+        candidate = f"{prefix}-{fallback_serial}-{check_char}"
+        if check_char.isdigit() and candidate != original_text:
+            return candidate
+    raise RuntimeError("unable to generate a numeric Ghana Card check character")
+
+
+def generate_kenya_national_id(
+    original: str | None = None,
+    *,
+    rng: random.Random | None = None,
+) -> str:
+    """Generate a distinct seven- or eight-digit Kenyan national ID."""
+    original_text = (original or "").strip()
+    length = len(original_text) if re.fullmatch(r"[0-9]{7,8}", original_text) else 8
+    return _numeric_surrogate(original_text, length=length, rng=rng or random.Random())
+
+
+def generate_kenya_maisha_namba(
+    original: str | None = None,
+    *,
+    rng: random.Random | None = None,
+) -> str:
+    """Generate a distinct 14-digit Kenya Maisha Namba surrogate."""
+    return _numeric_surrogate(
+        (original or "").strip(),
+        length=14,
+        rng=rng or random.Random(),
+    )
+
+
+class GhanaKenyaIdProvider(BaseProvider):
+    """Generate deterministic Ghanaian and Kenyan identity surrogates."""
+
+    def ghana_card_pin(self, original: str | None = None) -> str:
+        """Return a checksum-valid Ghana Card PIN surrogate."""
+        return generate_ghana_card_pin(original, rng=self.generator.random)
+
+    def kenya_national_id(self, original: str | None = None) -> str:
+        """Return a seven- or eight-digit Kenyan national ID surrogate."""
+        return generate_kenya_national_id(original, rng=self.generator.random)
+
+    def kenya_maisha_namba(self, original: str | None = None) -> str:
+        """Return a 14-digit Kenya Maisha Namba surrogate."""
+        return generate_kenya_maisha_namba(original, rng=self.generator.random)
 
 
 # ---------------------------------------------------------------------------
@@ -1856,6 +1968,7 @@ __all__ = [
     "EstonianIsikukoodProvider",
     "FinancialIdentifierProvider",
     "GermanSteuerIdProvider",
+    "GhanaKenyaIdProvider",
     "HungarianTAJProvider",
     "IndonesianNIKProvider",
     "IsraeliTeudatZehutProvider",
@@ -1885,10 +1998,13 @@ __all__ = [
     "generate_danish_cpr",
     "generate_hungarian_taj",
     "generate_estonian_isikukood",
+    "generate_ghana_card_pin",
     "generate_iban",
     "generate_ontario_health_card",
     "generate_indonesian_nik",
     "generate_jmbg",
+    "generate_kenya_maisha_namba",
+    "generate_kenya_national_id",
     "generate_teudat_zehut",
     "generate_korean_rrn",
     "generate_luhn_identifier",

@@ -14,6 +14,7 @@ so callers should run ``normalize_label(model_label)`` before lookup.
 
 from __future__ import annotations
 
+import re
 from typing import Callable, Dict
 
 from .. import labels as L
@@ -161,6 +162,9 @@ def _gen_age(faker, original, *, locale):
 # When the locale-appropriate ID method exists, we call it; otherwise we
 # format-preserve the original.
 _LOCALE_ID_METHODS = {
+    "en_GH": "ghana_card_pin",
+    "en_KE": "kenya_national_id",
+    "sw": "kenya_national_id",
     "pt_BR": "cpf",
     "pt_PT": "vat_id",
     "fr_FR": "ssn",
@@ -238,6 +242,12 @@ def _gen_id_num(faker, original, *, locale):
         return uscc
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
+        if locale in {"en_GH", "en_KE", "sw"}:
+            if locale in {"en_KE", "sw"} and re.fullmatch(
+                r"[0-9]{14}", original.strip()
+            ):
+                return faker.kenya_maisha_namba(original)
+            return getattr(faker, method)(original)
         return getattr(faker, method)()
     return preserve_id_pattern(original, rng=faker.random)
 

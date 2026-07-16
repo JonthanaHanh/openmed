@@ -64,6 +64,7 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "bg": "bg_BG",
     "hr": "hr_HR",
     "sr": "sr_RS",  # Faker has no Serbian locale; backed by hr_HR at runtime
+    "sw": "sw",
     "hu": "hu_HU",
     "et": "et_EE",
 }
@@ -78,6 +79,7 @@ _APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
+    "en_GH": "tw_GH",
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
 }
@@ -121,6 +123,7 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
     "bg": ("bg_BG", "egn"),  # Bulgarian EGN (unified civil number)
     "hr": ("hr_HR", "ssn"),  # Croatian OIB (Faker's native hr_HR ssn)
     "sr": ("sr_RS", "jmbg"),  # Serbian / ex-Yugoslav JMBG
+    "sw": ("sw", "kenya_national_id"),  # Kenyan legacy national ID
     "hu": ("hu_HU", "hungarian_taj"),  # TAJ social-security identifier
     "et": ("et_EE", "isikukood"),  # Estonian isikukood
 }
