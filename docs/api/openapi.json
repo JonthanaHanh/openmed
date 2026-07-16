@@ -180,6 +180,7 @@
           "lang": {
             "default": "en",
             "enum": [
+              "am",
               "en",
               "fr",
               "de",
@@ -401,6 +402,7 @@
           "lang": {
             "default": "en",
             "enum": [
+              "am",
               "en",
               "fr",
               "de",
@@ -524,6 +526,7 @@
           "lang": {
             "default": "en",
             "enum": [
+              "am",
               "en",
               "fr",
               "de",
@@ -620,6 +623,7 @@
           "lang": {
             "default": "en",
             "enum": [
+              "am",
               "en",
               "fr",
               "de",
@@ -736,6 +740,7 @@
           "lang": {
             "default": "en",
             "enum": [
+              "am",
               "en",
               "fr",
               "de",
@@ -860,6 +865,7 @@
           "lang": {
             "default": "en",
             "enum": [
+              "am",
               "en",
               "fr",
               "de",

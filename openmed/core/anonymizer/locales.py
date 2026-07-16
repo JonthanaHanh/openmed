@@ -8,6 +8,9 @@ Notes:
 - Telugu (``te``) has no Faker locale; we fall back to ``en_IN`` so generated
   surrogates stay culturally adjacent. This is documented and surfaced to
   callers as a ``UserWarning`` the first time it's used.
+- Amharic (``am``) has no Faker locale; the conceptual ``am_ET`` locale uses
+  ``en_KE`` as its runtime backend while curated Ethiopic surrogate data stays
+  available through the language pack.
 - Portuguese defaults to ``pt_PT``; pass ``locale="pt_BR"`` explicitly to
   generate Brazilian-Portuguese surrogates (matters for CPF/CNPJ context).
 
@@ -43,6 +46,7 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "nl": "nl_NL",
     "hi": "hi_IN",
     "te": "en_IN",  # Faker has no Telugu locale; en_IN is the closest match
+    "am": "am_ET",  # Conceptual locale; Faker backend is configured below
     "pt": "pt_PT",
     "ar": "ar_EG",  # Egypt is the most-populous Arabic-speaking country; override for Gulf/Levant locales.
     "he": "he_IL",
@@ -71,13 +75,14 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
 
 # Languages whose default locale is a known approximation rather than a
 # direct match. Used to emit a one-time warning so callers can override.
-_APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
+_APPROXIMATE_LOCALES: Final = frozenset({"te", "am", "ms", "sr"})
 
 
 # Conceptual locale -> installed Faker locale. This keeps national-ID dispatch
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
+    "am_ET": "en_KE",
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
 }

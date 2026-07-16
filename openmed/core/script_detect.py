@@ -17,6 +17,7 @@ UNKNOWN_SCRIPT = "Unknown"
 SUPPORTED_SCRIPTS = (
     "Latin",
     "Arabic",
+    "Ethiopic",
     "Han",
     "Hiragana/Katakana",
     "Hangul",
@@ -31,6 +32,7 @@ SUPPORTED_SCRIPTS = (
 SCRIPT_LANGUAGE_HINTS: dict[str, tuple[str, ...]] = {
     "Latin": ("en", "fr", "de", "it", "es", "nl", "pt", "tr"),
     "Arabic": ("ar",),
+    "Ethiopic": ("am",),
     "Han": ("ja",),
     "Hiragana/Katakana": ("ja",),
     "Hangul": ("ko",),
@@ -182,6 +184,16 @@ _SCRIPT_RANGES: tuple[tuple[str, tuple[tuple[int, int], ...]], ...] = (
         ),
     ),
     (
+        "Ethiopic",
+        (
+            (0x1200, 0x137F),
+            (0x1380, 0x139F),
+            (0x2D80, 0x2DDF),
+            (0xAB00, 0xAB2F),
+            (0x1E7E0, 0x1E7FF),
+        ),
+    ),
+    (
         "Han",
         (
             (0x3400, 0x4DBF),
@@ -329,8 +341,10 @@ def normalize_for_pii_detection(
     The defense strips zero-width controls and standalone combining marks, folds
     common Latin-lookalike Greek/Cyrillic/full-width characters, folds Indic
     decimal digits for ASCII validators, and records a script-consistency
-    summary without storing source text. ``width_convention`` selects the
-    CJK-safe width fold or strict per-character NFKC normalization.
+    summary without storing source text. Ethiopic combining marks are retained
+    because they belong to the preceding grapheme and must remain inside any PII
+    span. ``width_convention`` selects the CJK-safe width fold or strict
+    per-character NFKC normalization.
     """
 
     # Keep the reusable width-normalization API in ``processing`` while
@@ -374,7 +388,14 @@ def normalize_for_pii_detection(
         if char in ZERO_WIDTH_CHARS:
             removed_zero_width += 1
             continue
-        if unicodedata.category(char) == "Mn":
+        category = unicodedata.category(char)
+        attached_ethiopic_mark = (
+            category == "Mn"
+            and _script_for_char(char) == "Ethiopic"
+            and original_start > 0
+            and _script_for_char(text[original_start - 1]) == "Ethiopic"
+        )
+        if category == "Mn" and not attached_ethiopic_mark:
             stripped_combining_marks += 1
             continue
 
