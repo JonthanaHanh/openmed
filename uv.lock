@@ -4578,6 +4578,9 @@ onnx-runtime = [
     { name = "onnxruntime" },
     { name = "transformers" },
 ]
+openmrs = [
+    { name = "httpx" },
+]
 openvino = [
     { name = "nncf" },
     { name = "onnxruntime" },
@@ -4643,6 +4646,7 @@ requires-dist = [
     { name = "grpcio", marker = "extra == 'service'", specifier = ">=1.64" },
     { name = "grpcio-tools", marker = "extra == 'dev'", specifier = ">=1.64" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'openmrs'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'service'", specifier = ">=0.27" },
     { name = "huggingface-hub", marker = "extra == 'coreml'", specifier = ">=0.30" },
     { name = "huggingface-hub", marker = "extra == 'hf'", specifier = ">=0.30" },
@@ -4730,7 +4734,7 @@ requires-dist = [
     { name = "typer", marker = "extra == 'cli'", specifier = ">=0.12" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'service'", specifier = ">=0.29" },
 ]
-provides-extras = ["agents", "awq", "cli", "cloud", "columnar", "coreml", "dask", "dev", "docs", "duckdb", "gliner", "gptq", "grounding", "hf", "kafka", "langchain", "llamaindex", "mcp", "mlx", "multimodal", "ocr-paddle", "onnx", "onnx-runtime", "openvino", "pandas", "philter", "polars", "presidio", "pydeid", "service", "spacy", "spark"]
+provides-extras = ["agents", "awq", "cli", "cloud", "columnar", "coreml", "dask", "dev", "docs", "duckdb", "gliner", "gptq", "grounding", "hf", "kafka", "langchain", "llamaindex", "mcp", "mlx", "multimodal", "ocr-paddle", "onnx", "onnx-runtime", "openmrs", "openvino", "pandas", "philter", "polars", "presidio", "pydeid", "service", "spacy", "spark"]
 
 [[package]]
 name = "opentelemetry-api"
