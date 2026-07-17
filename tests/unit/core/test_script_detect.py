@@ -33,6 +33,7 @@ def test_detect_script_classifies_single_script_samples():
         "환자 김민수": "Hangul",
         "Пациент Иван": "Cyrillic",
         "मरीज़ अनिता शर्मा": "Devanagari",
+        "রোগী অনিতা সেন": "Bengali",
         "రోగి సీత రెడ్డి": "Telugu",
         "Ασθενής Νίκος": "Greek",
         "מטופל דוד כהן": "Hebrew",

@@ -14,6 +14,20 @@ from dataclasses import dataclass
 
 UNKNOWN_SCRIPT = "Unknown"
 
+INDIC_SCRIPTS = frozenset(
+    {
+        "Bengali",
+        "Devanagari",
+        "Gujarati",
+        "Gurmukhi",
+        "Kannada",
+        "Malayalam",
+        "Odia",
+        "Tamil",
+        "Telugu",
+    }
+)
+
 SUPPORTED_SCRIPTS = (
     "Latin",
     "Arabic",
@@ -22,7 +36,14 @@ SUPPORTED_SCRIPTS = (
     "Hangul",
     "Cyrillic",
     "Devanagari",
+    "Bengali",
+    "Gurmukhi",
+    "Gujarati",
+    "Odia",
+    "Tamil",
     "Telugu",
+    "Kannada",
+    "Malayalam",
     "Greek",
     "Hebrew",
     "Thai",
@@ -36,7 +57,14 @@ SCRIPT_LANGUAGE_HINTS: dict[str, tuple[str, ...]] = {
     "Hangul": ("ko",),
     "Cyrillic": ("en",),
     "Devanagari": ("hi",),
+    "Bengali": ("en",),
+    "Gurmukhi": ("en",),
+    "Gujarati": ("en",),
+    "Odia": ("en",),
+    "Tamil": ("en",),
     "Telugu": ("te",),
+    "Kannada": ("en",),
+    "Malayalam": ("en",),
     "Greek": ("en",),
     "Hebrew": ("en",),
     "Thai": ("en",),
@@ -234,7 +262,14 @@ _SCRIPT_RANGES: tuple[tuple[str, tuple[tuple[int, int], ...]], ...] = (
             (0x11B00, 0x11B5F),
         ),
     ),
+    ("Bengali", ((0x0980, 0x09FF),)),
+    ("Gurmukhi", ((0x0A00, 0x0A7F),)),
+    ("Gujarati", ((0x0A80, 0x0AFF),)),
+    ("Odia", ((0x0B00, 0x0B7F),)),
+    ("Tamil", ((0x0B80, 0x0BFF),)),
     ("Telugu", ((0x0C00, 0x0C7F),)),
+    ("Kannada", ((0x0C80, 0x0CFF),)),
+    ("Malayalam", ((0x0D00, 0x0D7F),)),
     (
         "Greek",
         (
@@ -251,6 +286,144 @@ _SCRIPT_RANGES: tuple[tuple[str, tuple[tuple[int, int], ...]], ...] = (
     ),
     ("Thai", ((0x0E00, 0x0E7F),)),
 )
+
+_INDIC_SCRIPT_RANGES = tuple(
+    ranges for script, ranges in _SCRIPT_RANGES if script in INDIC_SCRIPTS
+)
+_INDIC_VIRAMAS = frozenset(
+    {
+        "\u094d",  # Devanagari sign virama
+        "\u09cd",  # Bengali sign virama
+        "\u0a4d",  # Gurmukhi sign virama
+        "\u0acd",  # Gujarati sign virama
+        "\u0b4d",  # Odia sign virama
+        "\u0bcd",  # Tamil sign virama
+        "\u0c4d",  # Telugu sign virama
+        "\u0ccd",  # Kannada sign virama
+        "\u0d4d",  # Malayalam sign virama
+    }
+)
+_JOIN_CONTROLS = frozenset({"\u200c", "\u200d"})
+
+
+def is_indic_text(text: str) -> bool:
+    """Return whether ``text`` contains an Indic-script code point."""
+
+    return any(_is_indic_codepoint(ord(char)) for char in text)
+
+
+def iter_grapheme_clusters(text: str) -> Iterator[tuple[int, int]]:
+    """Yield grapheme-aligned ``(start, end)`` spans into ``text``.
+
+    The lightweight engine keeps combining and spacing marks with their base
+    and tailors Unicode grapheme boundaries for virama-linked Indic conjuncts,
+    including ZWJ and ZWNJ forms. Offsets always index the original string.
+    """
+
+    if not text:
+        return
+
+    cluster_start = 0
+    for index in range(1, len(text)):
+        if _has_grapheme_break(text, cluster_start=cluster_start, index=index):
+            yield cluster_start, index
+            cluster_start = index
+    yield cluster_start, len(text)
+
+
+def is_grapheme_boundary(index: int, text: str) -> bool:
+    """Return whether ``index`` falls between grapheme clusters in ``text``."""
+
+    if index < 0 or index > len(text):
+        return False
+    if index in {0, len(text)}:
+        return True
+    return any(end == index for _, end in iter_grapheme_clusters(text))
+
+
+def _has_grapheme_break(
+    text: str,
+    *,
+    cluster_start: int,
+    index: int,
+) -> bool:
+    previous = text[index - 1]
+    current = text[index]
+
+    if previous == "\r" and current == "\n":
+        return False
+    if _is_grapheme_control(previous) or _is_grapheme_control(current):
+        return True
+    if _is_grapheme_extend(current) or unicodedata.category(current) == "Mc":
+        return False
+    if _continues_indic_conjunct(text, cluster_start=cluster_start, index=index):
+        return False
+    return True
+
+
+def _continues_indic_conjunct(
+    text: str,
+    *,
+    cluster_start: int,
+    index: int,
+) -> bool:
+    current = text[index]
+    current_script = _indic_script_for_char(current)
+    if current_script is None or not unicodedata.category(current).startswith("L"):
+        return False
+
+    cursor = index - 1
+    saw_virama = False
+    while cursor >= cluster_start:
+        char = text[cursor]
+        if char in _INDIC_VIRAMAS:
+            saw_virama = True
+            cursor -= 1
+            continue
+        if _is_grapheme_extend(char) or char in _JOIN_CONTROLS:
+            cursor -= 1
+            continue
+        return (
+            saw_virama
+            and unicodedata.category(char).startswith("L")
+            and _indic_script_for_char(char) == current_script
+        )
+    return False
+
+
+def _is_grapheme_extend(char: str) -> bool:
+    codepoint = ord(char)
+    return (
+        unicodedata.category(char) in {"Mn", "Me"}
+        or char in _JOIN_CONTROLS
+        or 0x1F3FB <= codepoint <= 0x1F3FF
+        or 0xFE00 <= codepoint <= 0xFE0F
+        or 0xE0100 <= codepoint <= 0xE01EF
+    )
+
+
+def _is_grapheme_control(char: str) -> bool:
+    if char in _JOIN_CONTROLS:
+        return False
+    return unicodedata.category(char) in {"Cc", "Cf", "Cs", "Zl", "Zp"}
+
+
+def _is_indic_codepoint(codepoint: int) -> bool:
+    return any(
+        start <= codepoint <= end
+        for ranges in _INDIC_SCRIPT_RANGES
+        for start, end in ranges
+    )
+
+
+def _indic_script_for_char(char: str) -> str | None:
+    codepoint = ord(char)
+    for script, ranges in _SCRIPT_RANGES:
+        if script in INDIC_SCRIPTS and any(
+            start <= codepoint <= end for start, end in ranges
+        ):
+            return script
+    return None
 
 
 def detect_script(text: str) -> str:
@@ -436,12 +609,16 @@ def _fold_confusable_char(char: str) -> str:
 
 __all__ = [
     "DetectionNormalization",
+    "INDIC_SCRIPTS",
     "SCRIPT_LANGUAGE_HINTS",
     "SUPPORTED_SCRIPTS",
     "UNKNOWN_SCRIPT",
     "ZERO_WIDTH_CHARS",
     "candidate_languages_for_script",
     "detect_script",
+    "is_grapheme_boundary",
+    "is_indic_text",
+    "iter_grapheme_clusters",
     "normalize_for_pii_detection",
     "segment_by_script",
 ]
