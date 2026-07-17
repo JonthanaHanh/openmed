@@ -29,7 +29,9 @@ SUPPORTED_SCRIPTS = (
 )
 
 SCRIPT_LANGUAGE_HINTS: dict[str, tuple[str, ...]] = {
-    "Latin": ("en", "fr", "de", "it", "es", "nl", "pt", "tr"),
+    # Roman-script Hindi is resolved by the token LID layer rather than by
+    # script alone, so Hindi remains a candidate for Latin runs.
+    "Latin": ("en", "hi", "fr", "de", "it", "es", "nl", "pt", "tr"),
     "Arabic": ("ar",),
     "Han": ("ja",),
     "Hiragana/Katakana": ("ja",),

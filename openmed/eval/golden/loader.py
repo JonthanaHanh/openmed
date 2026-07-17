@@ -39,6 +39,7 @@ _FIXTURE_DIR = _GOLDEN_DIR / "fixtures"
 _TOP_LEVEL_FIXTURES: tuple[Path, ...] = (_GOLDEN_DIR / "financial_ids.jsonl",)
 _NON_DEID_FIXTURE_NAMES = frozenset(
     {
+        "code_mixed_hinglish.jsonl",
         "context_multilingual.jsonl",
         "grounding_crosslingual.jsonl",
         "relation_assertion.jsonl",

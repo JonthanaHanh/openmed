@@ -5,7 +5,10 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
+
+if TYPE_CHECKING:
+    from .lang_id_codemix import TokenLIDHook
 
 from ..processing.outputs import EntityPrediction
 from .anonymizer.providers.clinical_ids import id_subtype_for_entity_type
@@ -152,6 +155,7 @@ def safety_sweep(
     lang: str = "en",
     locale: str | None = None,
     patterns: Sequence[PIIPattern] | None = None,
+    lid_model: "TokenLIDHook | None" = None,
 ) -> list[Any]:
     """Add deterministic structured identifier spans not covered by ML spans.
 
@@ -163,11 +167,19 @@ def safety_sweep(
     existing = list(spans)
     selected: list[_Candidate] = []
     active_spans: list[Any] = list(existing)
-    sweep_patterns = (
-        list(patterns)
-        if patterns is not None
-        else _patterns_for_language(lang, locale=locale)
-    )
+    if patterns is not None:
+        sweep_patterns = list(patterns)
+    elif lang in {"en", "hi"}:
+        from .pii_i18n import get_patterns_for_code_mixed_text
+
+        sweep_patterns = get_patterns_for_code_mixed_text(
+            text,
+            base_lang=lang,
+            locale=locale,
+            lid_model=lid_model,
+        )
+    else:
+        sweep_patterns = _patterns_for_language(lang, locale=locale)
 
     for candidate in _collect_candidates(text, sweep_patterns):
         if _overlaps(candidate.start, candidate.end, active_spans):

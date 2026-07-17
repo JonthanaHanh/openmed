@@ -18,6 +18,8 @@ Health identifiers for HIPAA cross-map consumers:
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from datetime import date
 from typing import Dict, List, Optional, Set
 
@@ -29,6 +31,12 @@ from .anonymizer.providers.clinical_ids import (
     validate_ontario_health_card,
     validate_uk_nhs_number,
     validate_uk_nino,
+)
+from .lang_id_codemix import (
+    TokenLanguageRun,
+    TokenLIDHook,
+    identify_token_languages,
+    token_language_runs,
 )
 
 # ---------------------------------------------------------------------------
@@ -2877,6 +2885,11 @@ _HINDI_PII_PATTERNS: List[PIIPattern] = [
             "\u091c\u0928\u094d\u092e\u0924\u093f\u0925\u093f",
             "\u092d\u0930\u094d\u0924\u0940",
             "\u0924\u093e\u0930\u0940\u0916",
+            "janam",
+            "janam tithi",
+            "janam tareekh",
+            "bharti",
+            "tareekh",
         ],
         context_boost=0.3,
     ),
@@ -2890,6 +2903,11 @@ _HINDI_PII_PATTERNS: List[PIIPattern] = [
             "\u091c\u0928\u094d\u092e\u0924\u093f\u0925\u093f",
             "\u092d\u0930\u094d\u0924\u0940",
             "\u0924\u093e\u0930\u0940\u0916",
+            "janam",
+            "janam tithi",
+            "janam tareekh",
+            "bharti",
+            "tareekh",
         ],
         context_boost=0.25,
     ),
@@ -2903,6 +2921,11 @@ _HINDI_PII_PATTERNS: List[PIIPattern] = [
             "\u092e\u094b\u092c\u093e\u0907\u0932",
             "\u0928\u0902\u092c\u0930",
             "\u0938\u0902\u092a\u0930\u094d\u0915",
+            "phone",
+            "mobile",
+            "mobail",
+            "number",
+            "sampark",
         ],
         context_boost=0.35,
     ),
@@ -2929,6 +2952,10 @@ _HINDI_PII_PATTERNS: List[PIIPattern] = [
             "\u092a\u093f\u0928\u0915\u094b\u0921",
             "\u0921\u093e\u0915",
             "\u092a\u0924\u093e",
+            "pin",
+            "pin code",
+            "dak",
+            "pata",
         ],
         context_boost=0.5,
         safety_sweep_requires_context=True,
@@ -5858,3 +5885,117 @@ def get_patterns_for_language(lang: str, locale: str | None = None) -> List[PIIP
         combined = combined + LOCALE_PII_PATTERNS.get(locale_key, [])
 
     return combined
+
+
+@dataclass(frozen=True)
+class CodeMixedPatternRun:
+    """Pattern routing decision for one raw-text-free token-language run."""
+
+    start: int
+    end: int
+    token_label: str
+    languages: tuple[str, ...]
+    patterns: tuple[PIIPattern, ...]
+
+
+def get_code_mixed_pattern_runs(
+    text: str,
+    *,
+    base_lang: str = "en",
+    locale: str | None = None,
+    lid_model: TokenLIDHook | None = None,
+) -> tuple[CodeMixedPatternRun, ...]:
+    """Route each Hinglish token run to Hindi and/or English PII patterns.
+
+    ``hi`` and ``en`` runs use their respective pattern packs. Named-entity
+    runs deliberately use both packs so an ``ne`` decision can never remove a
+    token from downstream consideration. Universal runs inherit the nearest
+    lexical route, which lets an identifier or date follow its surrounding
+    Hindi or English context. The returned records contain offsets and pattern
+    objects only, never token surfaces.
+    """
+    normalized_base = _normalize_pattern_language(base_lang)
+    tokens = identify_token_languages(text, model=lid_model)
+    token_runs = token_language_runs(tokens)
+    routes: list[CodeMixedPatternRun] = []
+    for index, run in enumerate(token_runs):
+        languages = _languages_for_token_run(
+            index,
+            token_runs,
+            base_lang=normalized_base,
+        )
+        patterns = _deduplicate_patterns(
+            pattern
+            for language in languages
+            for pattern in get_patterns_for_language(language, locale=locale)
+        )
+        routes.append(
+            CodeMixedPatternRun(
+                start=run.start,
+                end=run.end,
+                token_label=run.label,
+                languages=languages,
+                patterns=tuple(patterns),
+            )
+        )
+    return tuple(routes)
+
+
+def get_patterns_for_code_mixed_text(
+    text: str,
+    *,
+    base_lang: str = "en",
+    locale: str | None = None,
+    lid_model: TokenLIDHook | None = None,
+) -> List[PIIPattern]:
+    """Merge language-specific pattern results selected per token-LID run."""
+    combined: list[PIIPattern] = list(
+        get_patterns_for_language(base_lang, locale=locale)
+    )
+    for route in get_code_mixed_pattern_runs(
+        text,
+        base_lang=base_lang,
+        locale=locale,
+        lid_model=lid_model,
+    ):
+        combined.extend(route.patterns)
+    return _deduplicate_patterns(combined)
+
+
+def _languages_for_token_run(
+    index: int,
+    runs: Sequence[TokenLanguageRun],
+    *,
+    base_lang: str,
+) -> tuple[str, ...]:
+    label = runs[index].label
+    if label in {"hi", "en"}:
+        return (label,)
+    if label == "ne":
+        return ("hi", "en")
+
+    nearest: list[tuple[int, str]] = []
+    for other_index, other_run in enumerate(runs):
+        other_label = other_run.label
+        if other_label in {"hi", "en"}:
+            nearest.append((abs(other_index - index), other_label))
+    if not nearest:
+        return (base_lang,)
+    minimum_distance = min(distance for distance, _ in nearest)
+    return tuple(
+        dict.fromkeys(
+            language for distance, language in nearest if distance == minimum_distance
+        )
+    )
+
+
+def _deduplicate_patterns(patterns: Iterable[PIIPattern]) -> List[PIIPattern]:
+    unique: list[PIIPattern] = []
+    seen: set[int] = set()
+    for pattern in patterns:
+        marker = id(pattern)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique.append(pattern)
+    return unique

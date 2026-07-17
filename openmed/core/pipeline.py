@@ -241,6 +241,7 @@ class Pipeline:
         normalize_accents: Optional[bool] = None,
         use_safety_sweep: bool = True,
         loader: Any = None,
+        lid_model: Any = None,
         privacy_filter_pipeline: Any = None,
         model_detector: ModelDetector | None = None,
         clinical_model_detector: ModelDetector | None = None,
@@ -282,6 +283,7 @@ class Pipeline:
         self.normalize_accents = normalize_accents
         self.use_safety_sweep = use_safety_sweep
         self.loader = loader
+        self.lid_model = lid_model
         self.privacy_filter_pipeline = privacy_filter_pipeline
         self.model_detector = model_detector
         self.clinical_model_detector = clinical_model_detector
@@ -881,7 +883,11 @@ class Pipeline:
             text,
             [],
             lang=context.route.lang,
-            patterns=_deterministic_patterns(context.route.lang),
+            patterns=_deterministic_patterns(
+                context.route.lang,
+                text=text,
+                lid_model=self.lid_model,
+            ),
         )
         return (
             self._entities_to_spans(
@@ -901,15 +907,20 @@ class Pipeline:
 
     def stage5_fast_pii_model(self, text: str, route: LanguageRoute) -> Any:
         if self.model_detector is not None:
+            detector_kwargs: dict[str, Any] = {
+                "model_name": route.model_name,
+                "confidence_threshold": self.confidence_threshold,
+                "config": self.config,
+                "use_smart_merging": self.use_smart_merging,
+                "lang": route.lang,
+                "normalize_accents": self.normalize_accents,
+                "loader": self.loader,
+            }
+            if self.lid_model is not None:
+                detector_kwargs["lid_model"] = self.lid_model
             return self.model_detector(
                 text,
-                model_name=route.model_name,
-                confidence_threshold=self.confidence_threshold,
-                config=self.config,
-                use_smart_merging=self.use_smart_merging,
-                lang=route.lang,
-                normalize_accents=self.normalize_accents,
-                loader=self.loader,
+                **detector_kwargs,
             )
 
         from . import pii
@@ -923,6 +934,7 @@ class Pipeline:
             lang=route.lang,
             normalize_accents=self.normalize_accents,
             loader=self.loader,
+            lid_model=self.lid_model,
         )
 
     def stage6_clinical_phi_model(
@@ -1075,6 +1087,7 @@ class Pipeline:
                 text,
                 pii_result,
                 lang=context.route.lang,
+                lid_model=self.lid_model,
             )
         after = _redacted_char_count(getattr(pii_result, "entities", ()))
         if after < before:
@@ -1529,17 +1542,15 @@ def _remap_section_to_normalized(section: Any, offset_map: OffsetMap) -> Any:
 
 
 def _detect_script(text: str) -> str:
-    for char in text:
-        codepoint = ord(char)
-        if 0x0600 <= codepoint <= 0x06FF:
-            return "arabic"
-        if 0x3040 <= codepoint <= 0x30FF or 0x4E00 <= codepoint <= 0x9FFF:
-            return "japanese"
-        if 0x0900 <= codepoint <= 0x097F:
-            return "devanagari"
-        if 0x0C00 <= codepoint <= 0x0C7F:
-            return "telugu"
-    return "latin"
+    from .script_detect import detect_script
+
+    return {
+        "Arabic": "arabic",
+        "Han": "japanese",
+        "Hiragana/Katakana": "japanese",
+        "Devanagari": "devanagari",
+        "Telugu": "telugu",
+    }.get(detect_script(text), "latin")
 
 
 def _lang_from_script(script: str) -> str:
@@ -1551,7 +1562,12 @@ def _lang_from_script(script: str) -> str:
     }.get(script, "en")
 
 
-def _deterministic_patterns(lang: str) -> list[PIIPattern]:
+def _deterministic_patterns(
+    lang: str,
+    *,
+    text: str = "",
+    lid_model: Any = None,
+) -> list[PIIPattern]:
     from .anonymizer.providers import clinical_ids
 
     luhn_mrn = PIIPattern(
@@ -1563,12 +1579,27 @@ def _deterministic_patterns(lang: str) -> list[PIIPattern]:
         context_boost=0.05,
         validator=clinical_ids.validate_luhn,
     )
-    if lang == "en":
-        return [luhn_mrn, *PII_PATTERNS]
+    if lang not in {"en", "hi"}:
+        from .pii_i18n import get_patterns_for_language
 
-    from .pii_i18n import get_patterns_for_language
+        return [luhn_mrn, *get_patterns_for_language(lang)]
+    if not text:
+        if lang == "en":
+            return [luhn_mrn, *PII_PATTERNS]
+        from .pii_i18n import get_patterns_for_language
 
-    return [luhn_mrn, *get_patterns_for_language(lang)]
+        return [luhn_mrn, *get_patterns_for_language(lang)]
+
+    from .pii_i18n import get_patterns_for_code_mixed_text
+
+    return [
+        luhn_mrn,
+        *get_patterns_for_code_mixed_text(
+            text,
+            base_lang=lang,
+            lid_model=lid_model,
+        ),
+    ]
 
 
 def _entity_bounds(entity: Any, text: str) -> tuple[int, int] | None:

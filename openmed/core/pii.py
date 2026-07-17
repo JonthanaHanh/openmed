@@ -47,6 +47,7 @@ from .script_detect import DetectionNormalization, normalize_for_pii_detection
 if TYPE_CHECKING:
     from .anonymizer import Anonymizer
     from .audit import AuditReport
+    from .lang_id_codemix import TokenLIDHook
     from .models import ModelLoader
     from .surrogate_vault import SurrogateVault
 
@@ -685,13 +686,25 @@ def _apply_pii_smart_merging(
     lang: str,
     *,
     locale: Optional[str] = None,
+    lid_model: Optional["TokenLIDHook"] = None,
 ) -> Any:
     """Apply semantic-unit PII merging to a prediction result."""
     from ..processing.outputs import EntityPrediction
     from .pii_entity_merger import merge_entities_with_semantic_units
-    from .pii_i18n import get_patterns_for_language
+    from .pii_i18n import (
+        get_patterns_for_code_mixed_text,
+        get_patterns_for_language,
+    )
 
-    lang_patterns = get_patterns_for_language(lang, locale=locale)
+    if lang in {"en", "hi"}:
+        lang_patterns = get_patterns_for_code_mixed_text(
+            result.text,
+            base_lang=lang,
+            locale=locale,
+            lid_model=lid_model,
+        )
+    else:
+        lang_patterns = get_patterns_for_language(lang, locale=locale)
     entity_dicts = [
         {
             "entity_type": e.label,
@@ -753,6 +766,7 @@ def _extract_pii_batch(
     *,
     locale: Optional[str] = None,
     loader: Optional["ModelLoader"] = None,
+    lid_model: Optional["TokenLIDHook"] = None,
     privacy_filter_pipeline: Optional[Any] = None,
     **pipeline_kwargs: Any,
 ) -> list[Any]:
@@ -827,7 +841,13 @@ def _extract_pii_batch(
 
     if use_smart_merging and not uses_privacy_filter:
         results = [
-            _apply_pii_smart_merging(result, effective_model, lang, locale=locale)
+            _apply_pii_smart_merging(
+                result,
+                effective_model,
+                lang,
+                locale=locale,
+                lid_model=lid_model,
+            )
             for result in results
         ]
 
@@ -870,6 +890,7 @@ def extract_pii(
     *,
     locale: Optional[str] = None,
     loader: Optional["ModelLoader"] = None,
+    lid_model: Optional["TokenLIDHook"] = None,
     custom_recognizer: Any = None,
 ) -> PredictionResult:
     """Extract PII entities from text with intelligent entity merging.
@@ -899,6 +920,9 @@ def extract_pii(
             (accented) text.  ``None`` (default) auto-enables for languages
             in ``_ACCENT_NORMALIZE_LANGS`` (currently Spanish).
         loader: Optional shared model loader to reuse warmed pipelines.
+        lid_model: Optional user-supplied token language-ID hook for Hinglish
+            Latin-script disambiguation. The stdlib heuristic fallback is used
+            when omitted.
         custom_recognizer: Optional deny-list/allow-list recognizer config,
             ``CustomRecognizer`` instance, or JSON/YAML config path. Deny-list
             matches are added with ``custom:deny`` provenance; allow-list
@@ -954,6 +978,7 @@ def extract_pii(
         normalize_accents=normalize_accents,
         locale=locale,
         loader=loader,
+        lid_model=lid_model,
         custom_recognizer=custom_recognizer,
     )[0]
     if cache_results:
@@ -1007,6 +1032,7 @@ def _apply_safety_sweep_to_result(
     *,
     lang: str,
     locale: Optional[str] = None,
+    lid_model: Optional["TokenLIDHook"] = None,
 ) -> tuple[Any, int]:
     """Run the deterministic sweep and record its net span contribution."""
     from .quality_gates import validate_entity_spans
@@ -1017,7 +1043,13 @@ def _apply_safety_sweep_to_result(
     )
 
     before_count = len(pii_result.entities)
-    entities = safety_sweep(text, pii_result.entities, lang=lang, locale=locale)
+    entities = safety_sweep(
+        text,
+        pii_result.entities,
+        lang=lang,
+        locale=locale,
+        lid_model=lid_model,
+    )
     added_count = len(entities) - before_count
 
     metadata = dict(getattr(pii_result, "metadata", None) or {})
@@ -1751,6 +1783,7 @@ def _deidentify_batch(
     locale: Optional[str] = None,
     surrogate_vault: Optional["SurrogateVault"] = None,
     loader: Optional["ModelLoader"] = None,
+    lid_model: Optional["TokenLIDHook"] = None,
     privacy_filter_pipeline: Optional[Any] = None,
     **pipeline_kwargs: Any,
 ) -> list[DeidentificationResult]:
@@ -1776,6 +1809,7 @@ def _deidentify_batch(
         locale=locale,
         custom_recognizer=recognizer,
         loader=loader,
+        lid_model=lid_model,
         privacy_filter_pipeline=privacy_filter_pipeline,
         **pipeline_kwargs,
     )
@@ -1788,6 +1822,7 @@ def _deidentify_batch(
                 pii_result,
                 lang=lang,
                 locale=locale,
+                lid_model=lid_model,
             )
             _suppress_custom_allowed_entities(stripped_text, pii_result, recognizer)
             swept_results.append(pii_result)
@@ -1843,6 +1878,7 @@ def deidentify(
     locale: Optional[str] = None,
     surrogate_vault: Optional["SurrogateVault"] = None,
     loader: Optional["ModelLoader"] = None,
+    lid_model: Optional["TokenLIDHook"] = None,
     policy: Optional[str] = None,
     calibration_thresholds_path: Optional[str | Path] = None,
     custom_recognizer: Any = None,
@@ -1897,6 +1933,9 @@ def deidentify(
         normalize_accents: Strip diacritical marks before model inference.
             ``None`` (default) auto-enables for Spanish.
         loader: Optional shared model loader to reuse warmed pipelines.
+        lid_model: Optional user-supplied token language-ID hook for Hinglish
+            Latin-script disambiguation. The stdlib heuristic fallback is used
+            when omitted.
         consistent: When ``method="replace"`` or
             ``method="format_preserve"``, generate stable surrogates
             (same input -> same surrogate within the call). Lets repeated
@@ -1988,6 +2027,7 @@ def deidentify(
         normalize_accents=normalize_accents,
         use_safety_sweep=use_safety_sweep,
         loader=loader,
+        lid_model=lid_model,
         policy=policy,
         calibration_thresholds_path=(
             str(calibration_thresholds_path)
