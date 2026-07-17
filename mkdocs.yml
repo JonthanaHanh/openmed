@@ -35,6 +35,7 @@ nav:
       - Model Manifest: model-manifest.md
       - Advanced NER & Output Formatting: output-formatting.md
       - Clinical Context & Extraction Depth: clinical/context-and-extraction.md
+      - Chinese Terminology Grounding: clinical/chinese-terminology-grounding.md
       - Medication Sig Parser: clinical/sig-parser.md
       - Medical Tokenizer: medical-tokenizer.md
       - Configuration & Validation: configuration.md
