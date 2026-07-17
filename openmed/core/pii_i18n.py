@@ -26,6 +26,7 @@ from .anonymizer.providers.clinical_ids import (
     validate_australian_tfn,
     validate_bc_phn,
     validate_canadian_sin,
+    validate_luhn,
     validate_ontario_health_card,
     validate_uk_nhs_number,
     validate_uk_nino,
@@ -58,6 +59,7 @@ SUPPORTED_LANGUAGES: Set[str] = {
 # Languages with validator-backed national-ID coverage but no bundled default
 # PII model or full language pack yet.
 NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
+    "zh",
     "pl",
     "lv",
     "sk",
@@ -155,6 +157,61 @@ def validate_bic(text: str) -> bool:
     from .anonymizer.providers import clinical_ids
 
     return clinical_ids.validate_bic(text)
+
+
+# ---------------------------------------------------------------------------
+# Chinese Contact, Financial, and Travel Identifiers
+# ---------------------------------------------------------------------------
+
+
+def validate_chinese_mobile_number(text: str) -> bool:
+    """Validate a mainland China mobile number with an optional ``+86`` prefix."""
+
+    if not isinstance(text, str):
+        return False
+    return re.fullmatch(r"(?:\+86[ -]?)?1[3-9][0-9]{9}", text.strip()) is not None
+
+
+def validate_chinese_bank_card(text: str) -> bool:
+    """Validate a 16-19 digit Chinese bank-card candidate using Luhn."""
+
+    if not isinstance(text, str):
+        return False
+    candidate = text.strip()
+    if re.fullmatch(r"[0-9](?:[ -]?[0-9]){15,18}", candidate) is None:
+        return False
+    digits = re.sub(r"[ -]", "", candidate)
+    return 16 <= len(digits) <= 19 and validate_luhn(digits)
+
+
+def validate_chinese_passport(text: str) -> bool:
+    """Validate the offline structure of a PRC passport number."""
+
+    return bool(
+        isinstance(text, str) and re.fullmatch(r"[EGDSP][0-9]{8}", text.strip().upper())
+    )
+
+
+def validate_hong_kong_macau_permit(text: str) -> bool:
+    """Validate a Hong Kong/Macau resident Home Return Permit number."""
+
+    return bool(
+        isinstance(text, str) and re.fullmatch(r"[HM][0-9]{8}", text.strip().upper())
+    )
+
+
+def validate_taiwan_compatriot_permit(text: str) -> bool:
+    """Validate the eight-digit Taiwan Compatriot Permit structure."""
+
+    return bool(isinstance(text, str) and re.fullmatch(r"[0-9]{8}", text.strip()))
+
+
+# Descriptive aliases matching the official travel-permit names.
+validate_chinese_mobile = validate_chinese_mobile_number
+validate_hk_macau_permit = validate_hong_kong_macau_permit
+validate_mainland_travel_permit_hong_kong_macau = validate_hong_kong_macau_permit
+validate_mainland_travel_permit_taiwan = validate_taiwan_compatriot_permit
+validate_taiwan_permit = validate_taiwan_compatriot_permit
 
 
 # ---------------------------------------------------------------------------
@@ -1971,6 +2028,60 @@ def generate_mrz_td1(rng=None) -> str:
 # ---------------------------------------------------------------------------
 
 from .pii_entity_merger import PIIPattern  # noqa: E402
+
+_CHINESE_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        r"(?<![0-9])(?:\+86[ -]?)?1[3-9][0-9]{9}(?![0-9])",
+        "phone_number",
+        priority=14,
+        base_score=0.75,
+        context_words=["手机", "手机号", "电话", "联系电话"],
+        context_boost=0.2,
+        validator=validate_chinese_mobile_number,
+    ),
+    PIIPattern(
+        r"(?<![0-9])(?:[0-9][ -]?){15,18}[0-9](?![0-9])",
+        "credit_card",
+        priority=15,
+        base_score=0.55,
+        context_words=["银行卡", "银行卡号", "卡号", "银联卡"],
+        context_boost=0.4,
+        validator=validate_chinese_bank_card,
+        safety_sweep_requires_context=True,
+    ),
+    PIIPattern(
+        r"(?<![0-9A-Z])[EGDSP][0-9]{8}(?![0-9A-Z])",
+        "chinese_passport",
+        priority=14,
+        base_score=0.6,
+        context_words=["护照", "护照号", "护照号码", "旅行证件"],
+        context_boost=0.35,
+        validator=validate_chinese_passport,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"(?<![0-9A-Z])[HM][0-9]{8}(?![0-9A-Z])",
+        "home_return_permit",
+        priority=14,
+        base_score=0.6,
+        context_words=["回乡证", "港澳居民来往内地通行证", "港澳居民通行证"],
+        context_boost=0.35,
+        validator=validate_hong_kong_macau_permit,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"(?<![0-9A-Z])[0-9]{8}(?![0-9])",
+        "taiwan_compatriot_permit",
+        priority=13,
+        base_score=0.55,
+        context_words=["台胞证", "台湾居民来往大陆通行证", "台湾居民通行证"],
+        context_boost=0.4,
+        validator=validate_taiwan_compatriot_permit,
+        safety_sweep_requires_context=True,
+    ),
+]
 
 _UK_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
     # UK NHS Number (10 digits, optional 3-3-4 spacing, Modulus 11 check).
@@ -5098,6 +5209,7 @@ _VIETNAMESE_PII_PATTERNS: List[PIIPattern] = [
 
 
 LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "zh": _CHINESE_PII_PATTERNS,
     "fr": _FRENCH_PII_PATTERNS,
     "de": _GERMAN_PII_PATTERNS,
     "it": _ITALIAN_PII_PATTERNS,
@@ -5132,6 +5244,7 @@ LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
 }
 
 LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "zh_cn": _CHINESE_PII_PATTERNS,
     "en_gb": _UK_ENGLISH_PII_PATTERNS,
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,

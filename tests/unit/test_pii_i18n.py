@@ -103,6 +103,7 @@ class TestConstants:
 
     def test_national_id_only_languages(self):
         assert NATIONAL_ID_ONLY_LANGUAGES == {
+            "zh",
             "pl",
             "lv",
             "sk",

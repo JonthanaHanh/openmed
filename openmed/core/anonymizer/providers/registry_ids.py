@@ -30,6 +30,7 @@ from typing import Any, Callable
 from openmed.core.pii_i18n import (
     validate_aadhaar,
     validate_bulgarian_egn,
+    validate_chinese_passport,
     validate_croatian_oib,
     validate_czech_rodne_cislo,
     validate_czechoslovak_rodne_cislo,
@@ -40,6 +41,7 @@ from openmed.core.pii_i18n import (
     validate_french_nir,
     validate_german_steuer_id,
     validate_greek_amka,
+    validate_hong_kong_macau_permit,
     validate_hungarian_taj,
     validate_indonesian_nik,
     validate_israeli_teudat_zehut,
@@ -57,6 +59,7 @@ from openmed.core.pii_i18n import (
     validate_romanian_cnp,
     validate_spanish_dni,
     validate_spanish_nie,
+    validate_taiwan_compatriot_permit,
     validate_thai_national_id,
     validate_turkish_tckn,
     validate_uk_nhs_number,
@@ -72,6 +75,7 @@ from .clinical_ids import (
     BCPHNProvider,
     BulgarianEgnProvider,
     CanadianSINProvider,
+    ChineseIdentifierProvider,
     DanishCPRProvider,
     EstonianIsikukoodProvider,
     GermanSteuerIdProvider,
@@ -239,6 +243,28 @@ def _register_aliases(
 
 
 def _register_builtin_specs() -> None:
+    chinese_aliases = ("zh", "zh_CN", "cn")
+    _register_aliases(
+        chinese_aliases,
+        id_type="chinese_passport",
+        validate=validate_chinese_passport,
+        faker_method="chinese_passport",
+        faker_provider=ChineseIdentifierProvider,
+    )
+    _register_aliases(
+        chinese_aliases,
+        id_type="hong_kong_macau_permit",
+        validate=validate_hong_kong_macau_permit,
+        faker_method="hong_kong_macau_permit",
+        faker_provider=ChineseIdentifierProvider,
+    )
+    _register_aliases(
+        chinese_aliases,
+        id_type="taiwan_permit",
+        validate=validate_taiwan_compatriot_permit,
+        faker_method="taiwan_compatriot_permit",
+        faker_provider=ChineseIdentifierProvider,
+    )
     _register_aliases(
         ("fr", "fr_FR"),
         id_type="nir",

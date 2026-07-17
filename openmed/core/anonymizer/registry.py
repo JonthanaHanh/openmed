@@ -62,12 +62,23 @@ def _gen_username(faker, original, *, locale):
 # ---------------------------------------------------------------------------
 
 
+def _is_chinese_locale(locale: str) -> bool:
+    return locale.replace("-", "_").casefold() == "zh_cn"
+
+
 def _gen_email(faker, original, *, locale):
     fake = faker.email()
     return preserve_email_pattern(original, fake)
 
 
 def _gen_phone(faker, original, *, locale):
+    if _is_chinese_locale(locale):
+        from openmed.core.pii_i18n import validate_chinese_mobile_number
+
+        if validate_chinese_mobile_number(original):
+            from .providers.clinical_ids import generate_chinese_mobile_number
+
+            return generate_chinese_mobile_number(original, rng=faker.random)
     if any(ch.isdigit() for ch in original):
         return preserve_phone_format(original, rng=faker.random)
     return faker.phone_number()
@@ -238,6 +249,19 @@ def _gen_id_num(faker, original, *, locale):
     uscc = _uscc_surrogate(faker, original)
     if uscc is not None:
         return uscc
+    if _is_chinese_locale(locale):
+        from openmed.core.pii_i18n import (
+            validate_chinese_passport,
+            validate_hong_kong_macau_permit,
+            validate_taiwan_compatriot_permit,
+        )
+
+        if validate_chinese_passport(original):
+            return faker.chinese_passport(original)
+        if validate_hong_kong_macau_permit(original):
+            return faker.hong_kong_macau_permit(original)
+        if validate_taiwan_compatriot_permit(original):
+            return faker.taiwan_compatriot_permit(original)
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
         return getattr(faker, method)()
@@ -275,6 +299,13 @@ def _gen_api_key(faker, original, *, locale):
 
 
 def _gen_credit_card(faker, original, *, locale):
+    if _is_chinese_locale(locale):
+        from openmed.core.pii_i18n import validate_chinese_bank_card
+
+        if validate_chinese_bank_card(original):
+            from .providers.clinical_ids import generate_chinese_bank_card
+
+            return generate_chinese_bank_card(original, rng=faker.random)
     return faker.credit_card_number()
 
 
