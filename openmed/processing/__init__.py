@@ -61,6 +61,15 @@ from .pulsar_connector import PulsarClientPair, create_pulsar_clients
 from .text import TextProcessor, postprocess_text, preprocess_text
 from .tokenization import TokenizationHelper, infer_tokenizer_max_length
 from .tokenizer_cache import clear_tokenizer_cache, get_tokenizer
+from .zh_normalize import (
+    ChineseTargetScript,
+    OpenCCConfig,
+    OpenCCUnavailableWarning,
+    ScriptConversion,
+    convert_script,
+    detect_variant_normalized,
+    normalize_chinese_variants,
+)
 
 __all__ = [
     "TextProcessor",
@@ -70,6 +79,13 @@ __all__ = [
     "infer_tokenizer_max_length",
     "get_tokenizer",
     "clear_tokenizer_cache",
+    "ChineseTargetScript",
+    "OpenCCConfig",
+    "OpenCCUnavailableWarning",
+    "ScriptConversion",
+    "convert_script",
+    "detect_variant_normalized",
+    "normalize_chinese_variants",
     "OutputFormatter",
     "format_predictions",
     "render_spans_html",

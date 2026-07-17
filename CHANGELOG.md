@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added opt-in Simplified/Traditional Chinese normalization through OpenCC,
+  including Taiwan and Hong Kong conversion configs, mixed-variant detection,
+  and offset-preserving span projection back to original text (#1467).
 - Added an offline Vietnamese (`vi`) PII language pack with context-gated CCCD
   and legacy CMND detection, Vietnamese dates, phone numbers, addresses and
   five-digit postal codes, plus `vi_VN` surrogates and a synthetic golden
