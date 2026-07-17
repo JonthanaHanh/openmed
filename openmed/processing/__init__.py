@@ -61,6 +61,15 @@ from .pulsar_connector import PulsarClientPair, create_pulsar_clients
 from .text import TextProcessor, postprocess_text, preprocess_text
 from .tokenization import TokenizationHelper, infer_tokenizer_max_length
 from .tokenizer_cache import clear_tokenizer_cache, get_tokenizer
+from .zh_normalize import (
+    CHINESE_NUMERAL_CHARACTERS,
+    CHINESE_NUMERAL_PATTERN,
+    ChineseDateNormalization,
+    ChineseNumberSpan,
+    find_chinese_numbers,
+    normalize_chinese_dates,
+    parse_chinese_numeral,
+)
 
 __all__ = [
     "TextProcessor",
@@ -120,4 +129,11 @@ __all__ = [
     "deidentify_stream",
     "replay",
     "sentences",
+    "CHINESE_NUMERAL_CHARACTERS",
+    "CHINESE_NUMERAL_PATTERN",
+    "ChineseDateNormalization",
+    "ChineseNumberSpan",
+    "parse_chinese_numeral",
+    "find_chinese_numbers",
+    "normalize_chinese_dates",
 ]
