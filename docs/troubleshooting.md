@@ -383,12 +383,13 @@ text = validate_input(user_supplied_text, max_length=2000, allow_empty=False)
 **Symptom.** A PII call with an unrecognized `lang` raises:
 
 ```text
-ValueError: Unsupported language 'xx'. Supported: ['ar', 'de', 'en', 'es', 'fr', 'he', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pt', 'ro', 'te', 'th', 'tr']
+ValueError: Unsupported language 'xx'. Supported: ['ar', 'as', 'bn', 'de', 'en', 'es', 'fr', 'gu', 'he', 'hi', 'id', 'it', 'ja', 'kn', 'ko', 'ml', 'mr', 'nl', 'or', 'pa', 'pt', 'ro', 'ta', 'te', 'th', 'tr']
 ```
 
-**Cause.** PII extraction and de-identification support **17 supported PII language codes: ar, de, en, es,
-fr, he, hi, id, it, ja, ko, nl, pt, ro, te, th, and tr**. Passing anything outside that set (or a mistyped
-code) raises this error.
+**Cause.** PII extraction and de-identification support **26 supported PII language codes: ar, as, bn, de,
+en, es, fr, gu, he, hi, id, it, ja, kn, ko, ml, mr, nl, or, pa, pt, ro, ta, te, th, and tr**. Passing
+anything outside that set (or a mistyped code) raises this error. For the 11
+Indic languages, configure `OPENMED_INDIC_NER_MODEL` or pass an explicit model.
 
 **Fix.** Use one of the supported codes with `extract_pii(..., lang="<code>")`. Clinical NER coverage depends
 on the selected registry model — check each model's `languages` in the

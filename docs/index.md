@@ -9,7 +9,7 @@ scanning or copy/paste into notebooks.
 
 OpenMed `1.9.1` completes the `1.9` rollout for one ONNX token-classification
 model contract across Python, browsers, Node.js, and Android, alongside a
-corrected Swift package, expanded clinical extraction, 17-language PII
+corrected Swift package, expanded clinical extraction, 26-language PII
 coverage, and stronger release evidence:
 
 - **Policy-aware de-identification** with signed audit reports, reproducibility
@@ -20,10 +20,11 @@ coverage, and stronger release evidence:
 - **Python, Swift, Kotlin/Android, REST, gRPC, React Native, TypeScript, and
   browser paths** including OpenMedKit, typed REST clients, ONNX/WebGPU, and
   Transformers.js export bundles.
-- **17 supported PII language codes: ar, de, en, es, fr, he, hi, id, it, ja,
-  ko, nl, pt, ro, te, th, and tr** in the model-backed allow-list, with
-  locale-aware validation and surrogate generation, plus additional
-  validator-backed national-ID coverage for ID-only locales.
+- **26 supported PII language codes: ar, as, bn, de, en, es, fr, gu, he, hi,
+  id, it, ja, kn, ko, ml, mr, nl, or, pa, pt, ro, ta, te, th, and tr**, with
+  17 bundled or manifest-backed defaults and an explicitly configured optional
+  adapter for the 11 Indic languages, plus validator-backed national-ID
+  coverage for additional ID-only locales.
 - **Release evidence** for leakage heatmaps, model scorecards, threshold
   sweeps, k-anonymity/l-diversity/t-closeness, utility loss, SBOMs, signed
   images, SLSA provenance, secret scanning, and reproducible dependency locks.

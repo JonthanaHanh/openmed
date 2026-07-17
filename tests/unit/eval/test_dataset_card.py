@@ -19,7 +19,7 @@ from openmed.eval import (
 )
 from openmed.eval.datasets import license_for
 from openmed.eval.golden import GOLDEN_CATEGORIES, load_golden_fixtures
-from openmed.eval.suites import DRUGPROT, GOLDEN, SHIELD
+from openmed.eval.suites import DRUGPROT, GOLDEN, NAAMAPADAM, SHIELD
 from openmed.eval.suites.shield import (
     PUBLIC_SAMPLE_NOTES_CONFIG,
     PUBLIC_SAMPLE_SPANS_CONFIG,
@@ -34,7 +34,12 @@ def test_build_all_dataset_cards_is_offline_and_covers_concrete_suites() -> None
     cards = build_all_dataset_cards()
 
     assert tuple(card.dataset for card in cards) == DATASET_CARD_SUITES
-    assert tuple(card.dataset for card in cards) == (GOLDEN, SHIELD, DRUGPROT)
+    assert tuple(card.dataset for card in cards) == (
+        GOLDEN,
+        SHIELD,
+        DRUGPROT,
+        NAAMAPADAM,
+    )
     for card in cards:
         dataset_license = license_for(card.dataset)
         assert card.license_id == dataset_license.license_id

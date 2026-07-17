@@ -12,9 +12,9 @@ from openmed.core.audit import manifest_hash, stable_hash
 from openmed.eval.datasets.dua_stubs import DUA_GATED_CORPORA
 from openmed.eval.datasets.licenses import DatasetLicense, license_for
 from openmed.eval.golden import GOLDEN_CATEGORIES, load_golden_fixtures
-from openmed.eval.suites import DRUGPROT, GOLDEN, SHIELD, suite_metadata
+from openmed.eval.suites import DRUGPROT, GOLDEN, NAAMAPADAM, SHIELD, suite_metadata
 
-DATASET_CARD_SUITES: tuple[str, ...] = (GOLDEN, SHIELD, DRUGPROT)
+DATASET_CARD_SUITES: tuple[str, ...] = (GOLDEN, SHIELD, DRUGPROT, NAAMAPADAM)
 _EXTERNAL_SUITES = {SHIELD, DRUGPROT}
 MODEL_CARD_SCHEMA_VERSION = "openmed.eval.model_card.v1"
 PROVENANCE_MANIFEST_SCHEMA_VERSION = "openmed.eval.model_card.provenance.v1"
@@ -150,6 +150,8 @@ def build_dataset_card(suite: str, **loader_kwargs: Any) -> DatasetCard:
         return _shield_card(**loader_kwargs)
     if suite == DRUGPROT:
         return _drugprot_card(**loader_kwargs)
+    if suite == NAAMAPADAM:
+        return _naamapadam_card(**loader_kwargs)
     allowed = ", ".join(DATASET_CARD_SUITES)
     raise ValueError(
         f"unknown dataset card suite {suite!r}; expected one of: {allowed}"
@@ -1403,6 +1405,22 @@ def _drugprot_card(**loader_kwargs: Any) -> DatasetCard:
         splits=splits,
         provenance=str(metadata["doi"]),
         notes=str(metadata["redistribution"]),
+    )
+
+
+def _naamapadam_card(**loader_kwargs: Any) -> DatasetCard:
+    from openmed.eval.suites.naamapadam import load_naamapadam_fixtures
+
+    fixtures = load_naamapadam_fixtures(**loader_kwargs)
+    labels = {span.label for fixture in fixtures for span in fixture.gold_spans}
+    languages = {fixture.language for fixture in fixtures}
+    return _card_from_license(
+        license_for(NAAMAPADAM),
+        record_count=len(fixtures),
+        labels=labels,
+        languages=languages,
+        splits=("synthetic",),
+        provenance="committed synthetic Naamapadam-style fixtures",
     )
 
 

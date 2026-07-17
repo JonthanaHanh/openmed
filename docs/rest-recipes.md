@@ -174,9 +174,11 @@ hardware):
 ## Extract PII — `POST /pii/extract`
 
 Detect personally identifiable information. Unless `model_name` is set, OpenMed
-selects the recommended PII model for `lang`. The 17 supported PII language
-codes: `ar`, `de`, `en`, `es`, `fr`, `he`, `hi`, `id`, `it`, `ja`, `ko`, `nl`,
-`pt`, `ro`, `te`, `th`, and `tr`. `confidence_threshold` defaults to `0.5`.
+selects the recommended PII model for `lang`. The 26 supported PII language
+codes: `ar`, `as`, `bn`, `de`, `en`, `es`, `fr`, `gu`, `he`, `hi`, `id`, `it`,
+`ja`, `kn`, `ko`, `ml`, `mr`, `nl`, `or`, `pa`, `pt`, `ro`, `ta`, `te`, `th`,
+and `tr`. The 11 Indic languages use `OPENMED_INDIC_NER_MODEL` when explicitly
+configured; `confidence_threshold` defaults to `0.5`.
 
 ```bash
 curl -sS --max-time 310 -X POST "$OPENMED_URL/pii/extract" \

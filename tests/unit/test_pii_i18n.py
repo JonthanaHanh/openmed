@@ -82,6 +82,8 @@ class TestConstants:
 
     def test_supported_languages(self):
         assert SUPPORTED_LANGUAGES == {
+            "as",
+            "bn",
             "en",
             "fr",
             "de",
@@ -89,6 +91,13 @@ class TestConstants:
             "es",
             "nl",
             "hi",
+            "gu",
+            "kn",
+            "ml",
+            "mr",
+            "or",
+            "pa",
+            "ta",
             "te",
             "pt",
             "ar",

@@ -43,6 +43,12 @@ from openmed.eval.suites.multimodal_dicom import (
     multimodal_dicom_metadata,
     run_multimodal_dicom,
 )
+from openmed.eval.suites.naamapadam import (
+    NAAMAPADAM,
+    load_naamapadam_fixtures,
+    naamapadam_suite_metadata,
+    run_naamapadam,
+)
 from openmed.eval.suites.policy_compliance import (
     POLICY_COMPLIANCE,
     load_policy_compliance_fixtures,
@@ -75,6 +81,7 @@ DEFAULT_SUITES: tuple[str, ...] = (
     POLICY_COMPLIANCE,
     BIOMEDICAL_NER,
     MULTILINGUAL_NER,
+    NAAMAPADAM,
     MULTIMODAL_DICOM,
 )
 
@@ -110,6 +117,9 @@ def load_suite_fixtures(name: str, **kwargs: Any) -> list[Any]:
     if suite == MULTILINGUAL_NER:
         paths = kwargs.pop("paths", kwargs.pop("path", None))
         return load_multilingual_ner_fixtures(paths=paths, **kwargs)
+    if suite == NAAMAPADAM:
+        path = kwargs.pop("path", None)
+        return load_naamapadam_fixtures(**({"path": path} if path else {}))
     if suite == MULTIMODAL_DICOM:
         return load_multimodal_dicom_fixtures(**kwargs)
     raise ValueError(f"benchmark suite {suite!r} does not have a concrete loader yet")
@@ -133,6 +143,8 @@ def suite_metadata(name: str, **kwargs: Any) -> dict[str, Any]:
         return biomedical_ner_suite_metadata(**kwargs)
     if suite == MULTILINGUAL_NER:
         return multilingual_ner_suite_metadata(**kwargs)
+    if suite == NAAMAPADAM:
+        return naamapadam_suite_metadata()
     if suite == MULTIMODAL_DICOM:
         return multimodal_dicom_metadata(**kwargs)
     return {"suite": suite}
@@ -147,6 +159,7 @@ __all__ = [
     "POLICY_COMPLIANCE",
     "BIOMEDICAL_NER",
     "MULTILINGUAL_NER",
+    "NAAMAPADAM",
     "MULTIMODAL_DICOM",
     "RELATIONS",
     "RelationFixture",
@@ -168,6 +181,9 @@ __all__ = [
     "load_drugprot_fixtures",
     "load_biomedical_ner_fixtures",
     "load_multilingual_ner_fixtures",
+    "load_naamapadam_fixtures",
+    "naamapadam_suite_metadata",
+    "run_naamapadam",
     "drugprot_suite_metadata",
     "load_shield_fixtures",
     "shield_suite_metadata",

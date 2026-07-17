@@ -35,6 +35,8 @@ from typing import Final, Mapping
 # locales are backed by another installed Faker locale at runtime; see
 # ``FAKER_BACKEND_LOCALE``.
 LANG_TO_LOCALE: Final[Mapping[str, str]] = {
+    "as": "as_IN",
+    "bn": "bn_BD",
     "en": "en_US",
     "fr": "fr_FR",
     "de": "de_DE",
@@ -42,6 +44,13 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "es": "es_ES",
     "nl": "nl_NL",
     "hi": "hi_IN",
+    "gu": "gu_IN",
+    "kn": "kn_IN",
+    "ml": "ml_IN",
+    "mr": "mr_IN",
+    "or": "or_IN",
+    "pa": "pa_IN",
+    "ta": "ta_IN",
     "te": "en_IN",  # Faker has no Telugu locale; en_IN is the closest match
     "pt": "pt_PT",
     "ar": "ar_EG",  # Egypt is the most-populous Arabic-speaking country; override for Gulf/Levant locales.
@@ -73,13 +82,20 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
 
 # Languages whose default locale is a known approximation rather than a
 # direct match. Used to emit a one-time warning so callers can override.
-_APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
+_APPROXIMATE_LOCALES: Final = frozenset(
+    {"as", "kn", "ml", "mr", "pa", "te", "ms", "sr"}
+)
 
 
 # Conceptual locale -> installed Faker locale. This keeps national-ID dispatch
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
+    "as_IN": "bn_BD",
+    "kn_IN": "en_IN",
+    "ml_IN": "en_IN",
+    "mr_IN": "hi_IN",
+    "pa_IN": "en_IN",
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
 }

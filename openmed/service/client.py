@@ -13,6 +13,8 @@ KeepAliveValue = int | float | str
 AggregationStrategy = Literal["simple", "first", "average", "max"]
 DeidentificationMethod = Literal["mask", "remove", "replace", "hash", "shift_dates"]
 PIILanguage = Literal[
+    "as",
+    "bn",
     "en",
     "fr",
     "de",
@@ -20,6 +22,13 @@ PIILanguage = Literal[
     "es",
     "nl",
     "hi",
+    "gu",
+    "kn",
+    "ml",
+    "mr",
+    "or",
+    "pa",
+    "ta",
     "te",
     "pt",
     "ar",

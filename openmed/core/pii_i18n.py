@@ -36,6 +36,8 @@ from .anonymizer.providers.clinical_ids import (
 # ---------------------------------------------------------------------------
 
 SUPPORTED_LANGUAGES: Set[str] = {
+    "as",
+    "bn",
     "en",
     "fr",
     "de",
@@ -43,6 +45,13 @@ SUPPORTED_LANGUAGES: Set[str] = {
     "es",
     "nl",
     "hi",
+    "gu",
+    "kn",
+    "ml",
+    "mr",
+    "or",
+    "pa",
+    "ta",
     "te",
     "pt",
     "ar",
@@ -54,6 +63,16 @@ SUPPORTED_LANGUAGES: Set[str] = {
     "ko",
     "ro",
 }
+
+# Naamapadam languages supported by the optional Indic NER adapter. Existing
+# Hindi and Telugu defaults remain available; the shared CoNLL adapter is an
+# additional opt-in model family for all 11 languages.
+INDIC_NER_LANGUAGES = frozenset(
+    {"as", "bn", "gu", "hi", "kn", "ml", "mr", "or", "pa", "ta", "te"}
+)
+INDIC_NER_MODEL_ENV = "OPENMED_INDIC_NER_MODEL"
+OPTIONAL_PII_MODEL = f"env:{INDIC_NER_MODEL_ENV}"
+OPTIONAL_PII_MODEL_LANGUAGES = INDIC_NER_LANGUAGES
 
 # Languages with validator-backed national-ID coverage but no bundled default
 # PII model or full language pack yet.
@@ -76,6 +95,8 @@ NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
 }
 
 LANGUAGE_NAMES: Dict[str, str] = {
+    "as": "Assamese",
+    "bn": "Bengali",
     "en": "English",
     "fr": "French",
     "de": "German",
@@ -83,6 +104,13 @@ LANGUAGE_NAMES: Dict[str, str] = {
     "es": "Spanish",
     "nl": "Dutch",
     "hi": "Hindi",
+    "gu": "Gujarati",
+    "kn": "Kannada",
+    "ml": "Malayalam",
+    "mr": "Marathi",
+    "or": "Odia",
+    "pa": "Punjabi",
+    "ta": "Tamil",
     "te": "Telugu",
     "pt": "Portuguese",
     "ar": "Arabic",
@@ -96,6 +124,8 @@ LANGUAGE_NAMES: Dict[str, str] = {
 }
 
 LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
+    "as": "Assamese-",
+    "bn": "Bengali-",
     "en": "",
     "fr": "French-",
     "de": "German-",
@@ -103,6 +133,13 @@ LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
     "es": "Spanish-",
     "nl": "Dutch-",
     "hi": "Hindi-",
+    "gu": "Gujarati-",
+    "kn": "Kannada-",
+    "ml": "Malayalam-",
+    "mr": "Marathi-",
+    "or": "Odia-",
+    "pa": "Punjabi-",
+    "ta": "Tamil-",
     "te": "Telugu-",
     "pt": "Portuguese-",
     "ar": "Arabic-",
@@ -116,6 +153,8 @@ LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
 }
 
 DEFAULT_PII_MODELS: Dict[str, str] = {
+    "as": OPTIONAL_PII_MODEL,
+    "bn": OPTIONAL_PII_MODEL,
     "en": "OpenMed/OpenMed-PII-SuperClinical-Small-44M-v1",
     "fr": "OpenMed/OpenMed-PII-French-SuperClinical-Small-44M-v1",
     "de": "OpenMed/OpenMed-PII-German-SuperClinical-Small-44M-v1",
@@ -123,6 +162,13 @@ DEFAULT_PII_MODELS: Dict[str, str] = {
     "es": "OpenMed/OpenMed-PII-Spanish-SuperClinical-Small-44M-v1",
     "nl": "OpenMed/OpenMed-PII-Dutch-SuperClinical-Large-434M-v1",
     "hi": "OpenMed/OpenMed-PII-Hindi-SuperClinical-Large-434M-v1",
+    "gu": OPTIONAL_PII_MODEL,
+    "kn": OPTIONAL_PII_MODEL,
+    "ml": OPTIONAL_PII_MODEL,
+    "mr": OPTIONAL_PII_MODEL,
+    "or": OPTIONAL_PII_MODEL,
+    "pa": OPTIONAL_PII_MODEL,
+    "ta": OPTIONAL_PII_MODEL,
     "te": "OpenMed/OpenMed-PII-Telugu-SuperClinical-Large-434M-v1",
     "pt": "OpenMed/OpenMed-PII-Portuguese-SnowflakeMed-Large-568M-v1",
     "ar": "OpenMed/OpenMed-PII-Arabic-SnowflakeMed-Large-568M-v1",
@@ -1562,6 +1608,34 @@ def validate_romanian_cnp(text: str) -> bool:
 # ---------------------------------------------------------------------------
 
 LANGUAGE_MONTH_NAMES: Dict[str, List[str]] = {
+    "as": [
+        "জানুৱাৰী",
+        "ফেব্ৰুৱাৰী",
+        "মাৰ্চ",
+        "এপ্ৰিল",
+        "মে",
+        "জুন",
+        "জুলাই",
+        "আগষ্ট",
+        "ছেপ্টেম্বৰ",
+        "অক্টোবৰ",
+        "নৱেম্বৰ",
+        "ডিচেম্বৰ",
+    ],
+    "bn": [
+        "জানুয়ারি",
+        "ফেব্রুয়ারি",
+        "মার্চ",
+        "এপ্রিল",
+        "মে",
+        "জুন",
+        "জুলাই",
+        "আগস্ট",
+        "সেপ্টেম্বর",
+        "অক্টোবর",
+        "নভেম্বর",
+        "ডিসেম্বর",
+    ],
     "en": [
         "January",
         "February",
@@ -1673,6 +1747,104 @@ LANGUAGE_MONTH_NAMES: Dict[str, List[str]] = {
         "\u0905\u0915\u094d\u091f\u0942\u092c\u0930",
         "\u0928\u0935\u0902\u092c\u0930",
         "\u0926\u093f\u0938\u0902\u092c\u0930",
+    ],
+    "gu": [
+        "જાન્યુઆરી",
+        "ફેબ્રુઆરી",
+        "માર્ચ",
+        "એપ્રિલ",
+        "મે",
+        "જૂન",
+        "જુલાઈ",
+        "ઑગસ્ટ",
+        "સપ્ટેમ્બર",
+        "ઑક્ટોબર",
+        "નવેમ્બર",
+        "ડિસેમ્બર",
+    ],
+    "kn": [
+        "ಜನವರಿ",
+        "ಫೆಬ್ರವರಿ",
+        "ಮಾರ್ಚ್",
+        "ಏಪ್ರಿಲ್",
+        "ಮೇ",
+        "ಜೂನ್",
+        "ಜುಲೈ",
+        "ಆಗಸ್ಟ್",
+        "ಸೆಪ್ಟೆಂಬರ್",
+        "ಅಕ್ಟೋಬರ್",
+        "ನವೆಂಬರ್",
+        "ಡಿಸೆಂಬರ್",
+    ],
+    "ml": [
+        "ജനുവരി",
+        "ഫെബ്രുവരി",
+        "മാർച്ച്",
+        "ഏപ്രിൽ",
+        "മേയ്",
+        "ജൂൺ",
+        "ജൂലൈ",
+        "ഓഗസ്റ്റ്",
+        "സെപ്റ്റംബർ",
+        "ഒക്ടോബർ",
+        "നവംബർ",
+        "ഡിസംബർ",
+    ],
+    "mr": [
+        "जानेवारी",
+        "फेब्रुवारी",
+        "मार्च",
+        "एप्रिल",
+        "मे",
+        "जून",
+        "जुलै",
+        "ऑगस्ट",
+        "सप्टेंबर",
+        "ऑक्टोबर",
+        "नोव्हेंबर",
+        "डिसेंबर",
+    ],
+    "or": [
+        "ଜାନୁଆରୀ",
+        "ଫେବୃଆରୀ",
+        "ମାର୍ଚ୍ଚ",
+        "ଏପ୍ରିଲ",
+        "ମେ",
+        "ଜୁନ",
+        "ଜୁଲାଇ",
+        "ଅଗଷ୍ଟ",
+        "ସେପ୍ଟେମ୍ବର",
+        "ଅକ୍ଟୋବର",
+        "ନଭେମ୍ବର",
+        "ଡିସେମ୍ବର",
+    ],
+    "pa": [
+        "ਜਨਵਰੀ",
+        "ਫ਼ਰਵਰੀ",
+        "ਮਾਰਚ",
+        "ਅਪ੍ਰੈਲ",
+        "ਮਈ",
+        "ਜੂਨ",
+        "ਜੁਲਾਈ",
+        "ਅਗਸਤ",
+        "ਸਤੰਬਰ",
+        "ਅਕਤੂਬਰ",
+        "ਨਵੰਬਰ",
+        "ਦਸੰਬਰ",
+    ],
+    "ta": [
+        "ஜனவரி",
+        "பிப்ரவரி",
+        "மார்ச்",
+        "ஏப்ரல்",
+        "மே",
+        "ஜூன்",
+        "ஜூலை",
+        "ஆகஸ்ட்",
+        "செப்டம்பர்",
+        "அக்டோபர்",
+        "நவம்பர்",
+        "டிசம்பர்",
     ],
     "te": [
         "\u0c1c\u0c28\u0c35\u0c30\u0c3f",
@@ -5782,6 +5954,75 @@ LANGUAGE_FAKE_DATA: Dict[str, Dict[str, List[str]]] = {
         "ZIPCODE": ["104 31", "546 21", "262 21"],
     },
 }
+
+
+LANGUAGE_FAKE_DATA.update(
+    {
+        "as": {
+            "NAME": ["অৰুণ দাস"],
+            "EMAIL": ["rogi@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["গুৱাহাটী"],
+        },
+        "bn": {
+            "NAME": ["অরুণ দাস"],
+            "EMAIL": ["rogi@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["কলকাতা"],
+        },
+        "gu": {
+            "NAME": ["આરવ પટેલ"],
+            "EMAIL": ["dardi@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["અમદાવાદ"],
+        },
+        "kn": {
+            "NAME": ["ಅರುಣ್ ಕುಮಾರ್"],
+            "EMAIL": ["rogi@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["ಬೆಂಗಳೂರು"],
+        },
+        "ml": {
+            "NAME": ["അരുൺ കുമാർ"],
+            "EMAIL": ["rogi@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["കൊച്ചി"],
+        },
+        "mr": {
+            "NAME": ["आरव पाटील"],
+            "EMAIL": ["rugna@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["पुणे"],
+        },
+        "or": {
+            "NAME": ["ଅରୁଣ ଦାସ"],
+            "EMAIL": ["rogi@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["ଭୁବନେଶ୍ୱର"],
+        },
+        "pa": {
+            "NAME": ["ਅਰੁਣ ਸਿੰਘ"],
+            "EMAIL": ["mareez@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["ਅੰਮ੍ਰਿਤਸਰ"],
+        },
+        "ta": {
+            "NAME": ["அருண் குமார்"],
+            "EMAIL": ["noyali@example.in"],
+            "PHONE": ["+91 9876543210"],
+            "DATE": ["01/01/2000"],
+            "LOCATION": ["சென்னை"],
+        },
+    }
+)
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ from openmed.core.model_registry import (
     OPENMED_MODELS,
     _match_categories,
     get_model_suggestions,
+    get_pii_models_by_language,
 )
 from openmed.core.pii_entity_merger import is_more_specific, normalize_label
 from openmed.ner.labels import (
@@ -897,7 +898,11 @@ class TestModelRegistryEntityTypes:
 
     def test_at_least_one_pii_model_per_supported_language(self):
         """Every supported language should have at least one PII model in the registry."""
-        from openmed.core.pii_i18n import DEFAULT_PII_MODELS, SUPPORTED_LANGUAGES
+        from openmed.core.pii_i18n import (
+            DEFAULT_PII_MODELS,
+            OPTIONAL_PII_MODEL_LANGUAGES,
+            SUPPORTED_LANGUAGES,
+        )
 
         pii_keys = [k for k in OPENMED_MODELS if k.startswith("pii_")]
         for lang in SUPPORTED_LANGUAGES:
@@ -911,6 +916,9 @@ class TestModelRegistryEntityTypes:
                     for k in pii_keys
                 ), "No English PII model found"
             else:
+                if lang in OPTIONAL_PII_MODEL_LANGUAGES - {"hi", "te"}:
+                    assert get_pii_models_by_language(lang) == {}
+                    continue
                 # Non-English keys use pii_{lang}_ prefix, e.g. pii_de_superclinical_small
                 has_language_key = any(k.startswith(f"pii_{lang}_") for k in pii_keys)
                 default_model_id = DEFAULT_PII_MODELS.get(lang)

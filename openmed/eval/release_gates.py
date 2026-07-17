@@ -25,7 +25,7 @@ from openmed.core import model_registry, quality_gates
 from openmed.core import policy as policy_module
 from openmed.core.audit import AuditSignature, stable_hash
 from openmed.core.labels import normalize_label
-from openmed.core.pii_i18n import SUPPORTED_LANGUAGES
+from openmed.core.pii_i18n import OPTIONAL_PII_MODEL_LANGUAGES, SUPPORTED_LANGUAGES
 from openmed.core.thresholds import (
     DEFAULT_MEMBERSHIP_ADVANTAGE_CEILING,
     load_thresholds,
@@ -1451,7 +1451,7 @@ def _manifest_repo_ids(rows: Sequence[Mapping[str, Any]]) -> set[str]:
 
 
 def _manifest_pii_languages(rows: Sequence[Mapping[str, Any]]) -> set[str]:
-    languages: set[str] = set()
+    languages: set[str] = set(OPTIONAL_PII_MODEL_LANGUAGES)
     for row in rows:
         if not _is_pii_manifest_row(row):
             continue
