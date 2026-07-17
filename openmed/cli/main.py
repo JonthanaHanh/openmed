@@ -605,12 +605,12 @@ def _add_audit_command(subparsers: argparse._SubParsersAction) -> None:
 
     verify_parser = audit_sub.add_parser(
         "verify",
-        help="Verify an audit report's reproducibility hash and signature.",
+        help="Verify an audit report or tamper-evident audit chain.",
     )
     verify_parser.add_argument(
         "report",
         type=Path,
-        help="Path to a signed audit report JSON file.",
+        help="Path to an audit report or audit-chain JSON file.",
     )
     verify_parser.add_argument(
         "--key",
@@ -618,6 +618,28 @@ def _add_audit_command(subparsers: argparse._SubParsersAction) -> None:
         help=f"HMAC key for signed reports. Defaults to {_AUDIT_KEY_ENV}.",
     )
     verify_parser.set_defaults(handler=_handle_audit_verify)
+
+    chain_parser = audit_sub.add_parser(
+        "verify-chain",
+        help="Verify an audit chain and optionally a report committed to it.",
+    )
+    chain_parser.add_argument(
+        "chain",
+        type=Path,
+        help="Path to a tamper-evident audit-chain JSON file.",
+    )
+    chain_parser.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="Also verify this audit report and confirm chain membership.",
+    )
+    chain_parser.add_argument(
+        "--key",
+        default=None,
+        help=f"HMAC key for signed reports. Defaults to {_AUDIT_KEY_ENV}.",
+    )
+    chain_parser.set_defaults(handler=_handle_audit_chain_verify)
 
     show_parser = audit_sub.add_parser(
         "show",
@@ -1423,17 +1445,28 @@ def _handle_redact_dataset(args: argparse.Namespace) -> int:
 
 def _handle_audit_verify(args: argparse.Namespace) -> int:
     try:
-        report = _load_audit_report(args.report)
-    except (OSError, TypeError, ValueError) as exc:
-        sys.stderr.write(f"Failed to load audit report: {exc}\n")
+        artifact = _load_audit_artifact(args.report)
+    except (json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
+        sys.stderr.write(f"Failed to load audit artifact: {exc}\n")
         return 1
 
+    from ..core.audit_chain import AuditChain
+
+    if isinstance(artifact, AuditChain):
+        return _print_audit_chain_verification(artifact)
+    return _print_audit_report_verification(artifact, args.key)
+
+
+def _audit_report_verification(
+    report: Any,
+    key_override: str | None,
+) -> tuple[bool, bool, str]:
     repro_ok = report.repro_hash_matches()
     signature_status = "SKIPPED (report is unsigned)"
     signature_ok = True
 
     if report.signature is not None:
-        key = args.key or os.environ.get(_AUDIT_KEY_ENV)
+        key = key_override or os.environ.get(_AUDIT_KEY_ENV)
         if not key:
             signature_status = f"FAIL (set --key or {_AUDIT_KEY_ENV})"
             signature_ok = False
@@ -1446,11 +1479,56 @@ def _handle_audit_verify(args: argparse.Namespace) -> int:
             else:
                 signature_status = _pass_fail(signature_ok)
 
-    verified = repro_ok and signature_ok
+    return repro_ok and signature_ok, repro_ok, signature_status
+
+
+def _print_audit_report_verification(
+    report: Any,
+    key_override: str | None,
+) -> int:
+    verified, repro_ok, signature_status = _audit_report_verification(
+        report,
+        key_override,
+    )
+
     sys.stdout.write(f"Audit report verification: {_pass_fail(verified)}\n")
     sys.stdout.write(f"Reproducibility hash: {_pass_fail(repro_ok)}\n")
     sys.stdout.write(f"HMAC signature: {signature_status}\n")
     return 0 if verified else 1
+
+
+def _print_audit_chain_verification(chain: Any) -> int:
+    result = chain.verify()
+    sys.stdout.write(f"Audit chain verification: {_pass_fail(result.valid)}\n")
+    sys.stdout.write(f"Entries checked: {result.checked_entries}\n")
+    if not result.valid:
+        sys.stdout.write(f"Reason: {result.reason}\n")
+    return 0 if result.valid else 1
+
+
+def _handle_audit_chain_verify(args: argparse.Namespace) -> int:
+    from ..core.audit_chain import AuditChain
+
+    try:
+        chain = AuditChain.load(args.chain)
+    except (json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
+        sys.stderr.write(f"Failed to load audit chain: {exc}\n")
+        return 1
+
+    chain_status = _print_audit_chain_verification(chain)
+    if args.report is None:
+        return chain_status
+
+    try:
+        report = _load_audit_report(args.report)
+    except (OSError, TypeError, ValueError) as exc:
+        sys.stderr.write(f"Failed to load audit report: {exc}\n")
+        return 1
+
+    report_status = _print_audit_report_verification(report, args.key)
+    membership_ok = chain.contains_report(report)
+    sys.stdout.write(f"Audit report chain membership: {_pass_fail(membership_ok)}\n")
+    return 0 if chain_status == report_status == 0 and membership_ok else 1
 
 
 def _handle_audit_show(args: argparse.Namespace) -> int:
@@ -1468,6 +1546,18 @@ def _load_audit_report(path: Path):
     from ..core.audit import AuditReport
 
     return AuditReport.from_json(path.read_text(encoding="utf-8"))
+
+
+def _load_audit_artifact(path: Path):
+    from ..core.audit import AuditReport
+    from ..core.audit_chain import CHAIN_FORMAT, AuditChain
+
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(parsed, MappingABC):
+        raise ValueError("audit artifact JSON must contain an object")
+    if parsed.get("format") == CHAIN_FORMAT or "entries" in parsed:
+        return AuditChain.from_dict(parsed)
+    return AuditReport.from_dict(parsed)
 
 
 def _format_audit_summary(report: Any) -> str:
