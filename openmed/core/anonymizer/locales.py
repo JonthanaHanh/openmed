@@ -31,6 +31,9 @@ from __future__ import annotations
 import warnings
 from typing import Final, Mapping
 
+ZH_CN_ADDRESS_LOCALE: Final = "zh_CN"
+"""Faker locale used by Chinese hierarchical address surrogates."""
+
 # Default conceptual Faker locale per OpenMed language code. Some conceptual
 # locales are backed by another installed Faker locale at runtime; see
 # ``FAKER_BACKEND_LOCALE``.
@@ -47,7 +50,9 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "ar": "ar_EG",  # Egypt is the most-populous Arabic-speaking country; override for Gulf/Levant locales.
     "he": "he_IL",
     "ja": "ja_JP",
-    "zh": "zh_CN",  # CJK PERSON spans draw family-name-first Chinese surrogates
+    # Chinese PERSON spans use family-name-first ordering, while address labels
+    # use the bundled province -> city -> district hierarchy.
+    "zh": ZH_CN_ADDRESS_LOCALE,
     "tr": "tr_TR",
     "id": "id_ID",
     "th": "th_TH",
@@ -285,6 +290,7 @@ __all__ = [
     "LANG_TO_LOCALE",
     "FAKER_BACKEND_LOCALE",
     "NATIONAL_ID_PROVIDERS",
+    "ZH_CN_ADDRESS_LOCALE",
     "list_regional_locales",
     "locale_coherence_report",
     "resolve_faker_backend_locale",
