@@ -61,6 +61,16 @@ from .pulsar_connector import PulsarClientPair, create_pulsar_clients
 from .text import TextProcessor, postprocess_text, preprocess_text
 from .tokenization import TokenizationHelper, infer_tokenizer_max_length
 from .tokenizer_cache import clear_tokenizer_cache, get_tokenizer
+from .transliteration import (
+    INDIC_SCRIPTS,
+    LOSSY_CASES,
+    TransliterationResult,
+    from_latin,
+    romanized_to_iso15919,
+    to_latin,
+    transliterate,
+    transliteration_key,
+)
 
 __all__ = [
     "TextProcessor",
@@ -120,4 +130,12 @@ __all__ = [
     "deidentify_stream",
     "replay",
     "sentences",
+    "INDIC_SCRIPTS",
+    "LOSSY_CASES",
+    "TransliterationResult",
+    "from_latin",
+    "romanized_to_iso15919",
+    "to_latin",
+    "transliterate",
+    "transliteration_key",
 ]
