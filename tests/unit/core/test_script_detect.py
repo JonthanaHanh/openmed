@@ -5,6 +5,7 @@ from openmed.core.script_detect import (
     UNKNOWN_SCRIPT,
     candidate_languages_for_script,
     detect_script,
+    is_han_dominant,
     normalize_for_pii_detection,
     segment_by_script,
 )
@@ -74,6 +75,11 @@ def test_script_language_hints_cover_detectable_scripts():
         hints = candidate_languages_for_script(script)
         assert hints
         assert set(hints) <= SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES
+
+
+def test_han_dominance_detection_supports_language_routing():
+    assert is_han_dominant("患者王芳因心房颤动入院")
+    assert not is_han_dominant("Patient John Smith")
 
 
 def test_normalize_for_pii_detection_folds_obfuscation_with_offset_map():
