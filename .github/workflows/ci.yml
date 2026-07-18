@@ -29,6 +29,42 @@ jobs:
       run: |
         python scripts/release/check_github_actions_refs.py
 
+  readme-sw-drift:
+    needs: repo-policy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+
+    - name: Detect README changes
+      id: readme_changes
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        if [[ "$EVENT_NAME" != "pull_request" ]]; then
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+        elif git diff --quiet "$BASE_SHA" HEAD -- README.md README.sw.md; then
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+          echo "README.md and README.sw.md are unchanged."
+        else
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Check Swahili README drift
+      if: steps.readme_changes.outputs.should_run == 'true'
+      run: |
+        if ! python scripts/i18n/check_readme_sw_drift.py; then
+          echo "::error title=Swahili README drift::Review README.sw.md against README.md, then refresh the committed section manifest."
+          exit 1
+        fi
+
   lockfile-drift:
     runs-on: ubuntu-latest
     steps:

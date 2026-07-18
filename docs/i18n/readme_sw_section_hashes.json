@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "source": "README.md",
+  "translation": "README.sw.md",
+  "sections": [
+    {
+      "source_heading": "__preamble__",
+      "translation_heading": "__preamble__",
+      "source_sha256": "3d5d1998b8e46fd3e97a53b0bba6a597ef05d46682ffc7709aadc611616831a1",
+      "translation_sha256": "3872e25fb8a572f5c4748c7cd113d6c236b230b60d0f677a2ee7ab6b1009f45f"
+    },
+    {
+      "source_heading": "See it in action",
+      "translation_heading": "Ione ikifanya kazi",
+      "source_sha256": "87e9ebf1db66c82f01adc9fb70e313a2db201a46d08a4a0d7e9b289f523115ea",
+      "translation_sha256": "db685cdc6b52da186b2ac77e54133d3b8542eff0e6db278da4aca62d91af0b58"
+    },
+    {
+      "source_heading": "30-second example",
+      "translation_heading": "Mfano wa sekunde 30",
+      "source_sha256": "e18a0cf23b36ccc26c24ea967dc447c1fcdc0911ab1f3a017d0d8aa6f6cf1320",
+      "translation_sha256": "22966c690f9cd5b3cb59a2729d15ee176dcc99c082f9b7d4129b21d08e8ce19e"
+    },
+    {
+      "source_heading": "Why OpenMed?",
+      "translation_heading": "Kwa nini OpenMed?",
+      "source_sha256": "1bf5da457a392d5adb7b5542ca37c59bb6c706bafe8cf9a2b60bfa387cdfc02e",
+      "translation_sha256": "c937f98f69a96f87ca9af4445b590965f78edc9029c2a5ed0a50530982b2a6e4"
+    },
+    {
+      "source_heading": "On-device on Apple: Swift, MLX & iOS",
+      "translation_heading": "Kwenye kifaa cha Apple: Swift, MLX na iOS",
+      "source_sha256": "b0d7cda36fb78c5edf06959b1edae8e31285571a519c3c9e28f7f1ea2e7e5f23",
+      "translation_sha256": "c3698b31770009f75c84289f4aa490191f11cedabf7e89234e9bc6b9fb89934c"
+    },
+    {
+      "source_heading": "On-device on Android — Kotlin & ONNX Runtime Mobile",
+      "translation_heading": "Kwenye kifaa cha Android — Kotlin na ONNX Runtime Mobile",
+      "source_sha256": "1e9ab1b7892a75d76b77c16693953c8dcf98626b629d49851e86eebae53604c3",
+      "translation_sha256": "fb644de3b4a83513cbe8484ce39d23f643658e01d0dc4f9ffa75e4577c5b33ef"
+    },
+    {
+      "source_heading": "How it works",
+      "translation_heading": "Jinsi inavyofanya kazi",
+      "source_sha256": "f2d8b6e4c8775df6a2f41cc448c0ad9c214f629355c22d2e2fb8d766d742e5ef",
+      "translation_sha256": "620c0e87cd7f3b36f413dbce932dbb5def89cf632593452c40431c81223531b9"
+    },
+    {
+      "source_heading": "Quick start",
+      "translation_heading": "Anza haraka",
+      "source_sha256": "14e50e90737993456b40dab561dd522481d0ba8fbf67abc18d2440867f05ffbc",
+      "translation_sha256": "b949670f043de40e9e4893a62e11c0842c028002a7b59ef938d3d6cb049b86ea"
+    },
+    {
+      "source_heading": "Models",
+      "translation_heading": "Modeli",
+      "source_sha256": "1229d2b0c1450109a7a1b541aed17c970807730be5e26645b78ca98b6cb74fa5",
+      "translation_sha256": "3bde636e3adfdcbf5667266e98a9ba00c365084a8ec3229c695b2982a965b3cc"
+    },
+    {
+      "source_heading": "Privacy: PII detection & de-identification",
+      "translation_heading": "Faragha: utambuzi wa PII na uondoaji utambulisho",
+      "source_sha256": "77ab271445ecfc6f1ab82fdd04e89d86c055656d154c650e1fec40eebfad37fd",
+      "translation_sha256": "7bb96270f1ed3d2bdeef9d8d011515b98280a63ac3009244be5081b34504677a"
+    },
+    {
+      "source_heading": "Multilingual PII (17 model-backed languages)",
+      "translation_heading": "PII ya lugha nyingi (lugha 17 zinazotumia modeli)",
+      "source_sha256": "f725b692afe399ddd9068e42ab75d8c50fb87068e200a0dfc96d3c86a64661f0",
+      "translation_sha256": "b4833c6cfa1f4e78436b5103d2fb196ab47ad8f20f45cc22465524c407358e71"
+    },
+    {
+      "source_heading": "REST API",
+      "translation_heading": "REST API",
+      "source_sha256": "742c0ede424e154c510afa069d98cb78fd48510323bdc0bd9eec7251bbdc6c87",
+      "translation_sha256": "8b9db8b2bc6373c2722a12316fa61e970fd33934cf148d86ea33a8c40b916c31"
+    },
+    {
+      "source_heading": "Documentation",
+      "translation_heading": "Nyaraka",
+      "source_sha256": "463a07127e5b2a74fa55b12a753518af5f14d993bf65b51eca696151bf412ee6",
+      "translation_sha256": "f971a2a6dd46ed4288059430900384252755b2e0f17c3e8353f30790fa6a80e8"
+    },
+    {
+      "source_heading": "Meet the mascot",
+      "translation_heading": "Kutana na kinyago",
+      "source_sha256": "901153cff90aa4f47b6bf3071854a5f43e5be20c0ee00b81bcd255b3d89ce480",
+      "translation_sha256": "a58baaf43f3ad8897d22fc211779ef61cb55fdeaf16731edd936478398f05ae6"
+    },
+    {
+      "source_heading": "Contributing",
+      "translation_heading": "Kuchangia",
+      "source_sha256": "90894e9cb31825ac87f839d0ca3d8b5549f098c375603d0c73d8a23be3003b94",
+      "translation_sha256": "29eef74a2a9f1c43c99b9a61946afa85a14cd59e2fcb5fe403f98b075acb91b0"
+    },
+    {
+      "source_heading": "Security",
+      "translation_heading": "Usalama",
+      "source_sha256": "b16e02cc3498ca5578e60392f01f19f06583e0730d56bd000aa33ff68f70cb62",
+      "translation_sha256": "b15146639aa41c69d976007eb36936c6ba49a64314b5c9e3d81a91b890aaa420"
+    },
+    {
+      "source_heading": "Credits",
+      "translation_heading": "Shukrani",
+      "source_sha256": "2feda286eece483cc410b38dc387d6a62848b29c8c4a6e02f8398139dc815b26",
+      "translation_sha256": "c01ea1b65cd42a9ee3ebe61ec64825b1606fca2df1c1d29e74d99b7ba6c49a28"
+    },
+    {
+      "source_heading": "License",
+      "translation_heading": "Leseni",
+      "source_sha256": "0092b5d3cba4eb214653c7401524beaa6f0fdb1b20ee6e3b010e4ed05524d59e",
+      "translation_sha256": "db533825bee23031c588a726d68aa493e7e150f22ec728dfb7c748f0afa46b8c"
+    },
+    {
+      "source_heading": "Citation",
+      "translation_heading": "Nukuu",
+      "source_sha256": "4b8468e240029ca8d98617788a38b5ff5dc8e2011185ff53704883d4638b3d45",
+      "translation_sha256": "7ba7ba664df1e0d26a9052f34f765295e736e4b702252b7c3016141156947a79"
+    },
+    {
+      "source_heading": "Star History",
+      "translation_heading": "Historia ya nyota",
+      "source_sha256": "b723f4c9159526cad969411e95f32917f839a7c4630c19353707f6d05bca31b1",
+      "translation_sha256": "4f2f651f16e445c25e0830d0d84bbd00e6370bea49001f1d8c7cdced95ee5f1f"
+    }
+  ]
+}
