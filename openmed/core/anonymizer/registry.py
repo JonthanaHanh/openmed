@@ -231,6 +231,27 @@ def _uscc_surrogate(faker, original):
     return generate_unified_social_credit_code(rng=faker.random)
 
 
+def _mobile_money_surrogate(faker, original, *, locale):
+    """Return a length-preserving mobile-money surrogate in supported locales."""
+
+    if locale.casefold() not in {"en_ke", "en_tz", "en_gh", "en_ug"}:
+        return None
+
+    from openmed.core.pii_i18n import (
+        validate_mobile_money_paybill,
+        validate_momo_reference,
+    )
+
+    if validate_momo_reference(original) and hasattr(faker, "momo_reference"):
+        return faker.momo_reference(original)
+    if validate_mobile_money_paybill(original) and hasattr(
+        faker,
+        "mobile_money_paybill",
+    ):
+        return faker.mobile_money_paybill(original)
+    return None
+
+
 def _gen_id_num(faker, original, *, locale):
     mrz = _mrz_surrogate(faker, original)
     if mrz is not None:
@@ -238,6 +259,9 @@ def _gen_id_num(faker, original, *, locale):
     uscc = _uscc_surrogate(faker, original)
     if uscc is not None:
         return uscc
+    mobile_money = _mobile_money_surrogate(faker, original, locale=locale)
+    if mobile_money is not None:
+        return mobile_money
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
         return getattr(faker, method)()

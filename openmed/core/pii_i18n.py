@@ -157,6 +157,48 @@ def validate_bic(text: str) -> bool:
     return clinical_ids.validate_bic(text)
 
 
+def validate_mobile_money_paybill(text: str) -> bool:
+    """Validate a mobile-money paybill number's offline-verifiable shape.
+
+    Paybill numbers are five to seven ASCII digits. Detection remains
+    keyword-gated because numbers of this length are common in clinical text.
+
+    Args:
+        text: Candidate paybill number.
+
+    Returns:
+        True when ``text`` is an unformatted five- to seven-digit number.
+    """
+
+    return isinstance(text, str) and re.fullmatch(r"[0-9]{5,7}", text) is not None
+
+
+def validate_mobile_money_till(text: str) -> bool:
+    """Validate a mobile-money till or buy-goods number.
+
+    Args:
+        text: Candidate till number.
+
+    Returns:
+        True when ``text`` is an unformatted five- to seven-digit number.
+    """
+
+    return isinstance(text, str) and re.fullmatch(r"[0-9]{5,7}", text) is not None
+
+
+def validate_momo_reference(text: str) -> bool:
+    """Validate a numeric MTN MoMo transaction reference.
+
+    Args:
+        text: Candidate MoMo transaction reference.
+
+    Returns:
+        True when ``text`` is an unformatted 10- to 12-digit number.
+    """
+
+    return isinstance(text, str) and re.fullmatch(r"[0-9]{10,12}", text) is not None
+
+
 # ---------------------------------------------------------------------------
 # National ID Validators
 # ---------------------------------------------------------------------------
@@ -2062,6 +2104,81 @@ _CANADIAN_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
         ],
         context_boost=0.45,
         validator=validate_canadian_sin,
+    ),
+]
+
+
+_MOBILE_MONEY_ACCOUNT_PATTERN = (
+    "(?:"
+    + "|".join(
+        rf"(?<={paybill}[ \t][0-9]{{{length}}}[ \t]{account}[ \t])"
+        for paybill in (
+            "Paybill",
+            "Paybill:",
+            "Paybill No",
+            "Paybill No.",
+            "Pay Bill",
+            "Pay Bill No",
+            "Pay Bill No.",
+        )
+        for length in (5, 6, 7)
+        for account in ("Account", "Account:", "Acc", "Acc:")
+    )
+    + ")"
+    + r"[^\W_][\w/'-]*(?:[ \t]+[^\W_][\w/'-]*){0,3}"
+    + r"(?=[ \t]*(?:[.;,|]|\r?$))"
+)
+
+_MOBILE_MONEY_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        _MOBILE_MONEY_ACCOUNT_PATTERN,
+        "mobile_money_account",
+        priority=13,
+        base_score=0.3,
+        context_words=["paybill", "pay bill"],
+        context_boost=0.6,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE | re.MULTILINE,
+    ),
+    PIIPattern(
+        r"(?<![0-9])[0-9]{5,7}(?![0-9])",
+        "mobile_money_paybill",
+        priority=12,
+        base_score=0.25,
+        context_words=["paybill", "pay bill", "lipa"],
+        context_boost=0.65,
+        validator=validate_mobile_money_paybill,
+        safety_sweep_requires_context=True,
+    ),
+    PIIPattern(
+        r"(?<![0-9])[0-9]{5,7}(?![0-9])",
+        "mobile_money_till",
+        priority=12,
+        base_score=0.25,
+        context_words=["till", "till no", "buy goods", "buygoods", "lipa"],
+        context_boost=0.65,
+        validator=validate_mobile_money_till,
+        safety_sweep_requires_context=True,
+    ),
+    PIIPattern(
+        r"(?<![0-9])[0-9]{5,7}(?![0-9])",
+        "mobile_money_agent",
+        priority=12,
+        base_score=0.25,
+        context_words=["agent", "agent no", "agent number", "lipa"],
+        context_boost=0.65,
+        validator=validate_mobile_money_paybill,
+        safety_sweep_requires_context=True,
+    ),
+    PIIPattern(
+        r"(?<![0-9])[0-9]{10,12}(?![0-9])",
+        "momo_reference",
+        priority=12,
+        base_score=0.25,
+        context_words=["momo", "momo ref", "momo reference", "mtn momo"],
+        context_boost=0.65,
+        validator=validate_momo_reference,
+        safety_sweep_requires_context=True,
     ),
 ]
 
@@ -5136,6 +5253,11 @@ LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
     "fr_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
+    "sw": _MOBILE_MONEY_PII_PATTERNS,
+    "en_ke": _MOBILE_MONEY_PII_PATTERNS,
+    "en_tz": _MOBILE_MONEY_PII_PATTERNS,
+    "en_gh": _MOBILE_MONEY_PII_PATTERNS,
+    "en_ug": _MOBILE_MONEY_PII_PATTERNS,
 }
 
 
@@ -5801,8 +5923,9 @@ def _locale_pattern_keys(lang: str, locale: str | None) -> list[str]:
     keys: list[str] = []
     if locale:
         keys.append(_normalize_pattern_locale(locale))
-    if "_" in lang or "-" in lang:
-        keys.append(_normalize_pattern_locale(lang))
+    normalized_lang = _normalize_pattern_locale(lang)
+    if "_" in lang or "-" in lang or normalized_lang in LOCALE_PII_PATTERNS:
+        keys.append(normalized_lang)
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -5836,7 +5959,10 @@ def get_patterns_for_language(lang: str, locale: str | None = None) -> List[PIIP
     Raises:
         ValueError: If the language is not supported
     """
-    supported_pattern_languages = SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES
+    locale_pattern_languages = {key.split("_", 1)[0] for key in LOCALE_PII_PATTERNS}
+    supported_pattern_languages = (
+        SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES | locale_pattern_languages
+    )
     base_lang = _normalize_pattern_language(lang)
     if base_lang not in supported_pattern_languages:
         raise ValueError(

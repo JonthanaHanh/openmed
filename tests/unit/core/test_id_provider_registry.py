@@ -47,6 +47,8 @@ EXPECTED_VALIDATOR_KEYS = (
     ("vi", "cccd"),
     ("vi", "cmnd"),
     ("us", "npi"),
+    ("sw", "mobile_money_paybill"),
+    ("sw", "momo_reference"),
 )
 
 
@@ -135,6 +137,35 @@ class TestNationalIdRegistry:
 
     def test_unknown_lookup_returns_none(self):
         assert get_national_id("zz", "unknown") is None
+
+    @pytest.mark.parametrize(
+        "alias",
+        ("ke", "tz", "gh", "ug", "sw", "en_ke", "en_tz", "en_gh", "en_ug"),
+    )
+    @pytest.mark.parametrize(
+        ("id_type", "original"),
+        (
+            ("mobile_money_paybill", "542542"),
+            ("momo_reference", "81234567890"),
+        ),
+    )
+    def test_mobile_money_aliases_generate_valid_surrogates(
+        self,
+        alias,
+        id_type,
+        original,
+    ):
+        spec = get_national_id(alias, id_type)
+        assert spec is not None
+
+        faker = Faker("en_KE")
+        register_clinical_providers(faker)
+        faker.seed_instance(860)
+        surrogate = getattr(faker, spec.faker_method)(original)
+
+        assert surrogate != original
+        assert len(surrogate) == len(original)
+        assert spec.validate(surrogate)
 
     def test_duplicate_registration_rejects_key_with_clear_error(self):
         key = ("zz", "dummy")

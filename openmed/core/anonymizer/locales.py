@@ -68,6 +68,7 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "et": "et_EE",
     "el": "el_GR",
     "vi": "vi_VN",
+    "sw": "en_KE",
 }
 
 
@@ -82,6 +83,9 @@ _APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
+    "en_TZ": "en_KE",
+    "en_GH": "en_NG",
+    "en_UG": "en_KE",
 }
 
 
