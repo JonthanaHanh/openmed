@@ -573,6 +573,93 @@ class AadhaarProvider(BaseProvider):
 
 
 # ---------------------------------------------------------------------------
+# India health identifiers (ABHA, UPI, ration card)
+# ---------------------------------------------------------------------------
+
+_UPI_SURROGATE_PROVIDERS = (
+    "okaxis",
+    "okhdfcbank",
+    "oksbi",
+    "paytm",
+    "upi",
+    "ybl",
+)
+_RATION_CARD_STATE_PREFIXES = (
+    "AP",
+    "AS",
+    "BR",
+    "DL",
+    "GJ",
+    "KA",
+    "KL",
+    "MH",
+    "PB",
+    "RJ",
+    "TN",
+    "TS",
+    "UP",
+    "WB",
+)
+
+
+def generate_abha_number(*, rng: random.Random | None = None) -> str:
+    """Generate a 14-digit ABHA surrogate with a Verhoeff check digit."""
+
+    source = rng or random.Random()
+    digits = [source.randint(1, 9)]
+    digits.extend(source.randint(0, 9) for _ in range(12))
+    digits.append(_verhoeff_checksum(digits))
+    return "".join(str(digit) for digit in digits)
+
+
+def generate_abha_address(*, rng: random.Random | None = None) -> str:
+    """Generate a structurally valid synthetic ABHA Address."""
+
+    source = rng or random.Random()
+    stem = source.choice(("patient", "health", "record", "member"))
+    suffix = "".join(str(source.randint(0, 9)) for _ in range(6))
+    domain = source.choice(("abdm", "sbx"))
+    return f"{stem}.{suffix}@{domain}"
+
+
+def generate_upi_id(*, rng: random.Random | None = None) -> str:
+    """Generate a structurally valid synthetic UPI virtual payment address."""
+
+    source = rng or random.Random()
+    stem = source.choice(("patient", "refund", "member", "account"))
+    suffix = "".join(str(source.randint(0, 9)) for _ in range(6))
+    provider = source.choice(_UPI_SURROGATE_PROVIDERS)
+    return f"{stem}.{suffix}@{provider}"
+
+
+def generate_indian_ration_card(*, rng: random.Random | None = None) -> str:
+    """Generate a conservative synthetic Indian ration-card identifier."""
+
+    source = rng or random.Random()
+    prefix = source.choice(_RATION_CARD_STATE_PREFIXES)
+    digits = "".join(str(source.randint(0, 9)) for _ in range(10))
+    if len(set(digits)) == 1:
+        digits = f"{digits[:-1]}{(int(digits[-1]) + 1) % 10}"
+    return f"{prefix}-{digits}"
+
+
+class IndiaHealthIdProvider(BaseProvider):
+    """Faker provider for synthetic Indian health-adjacent identifiers."""
+
+    def abha_number(self) -> str:
+        return generate_abha_number(rng=self.generator.random)
+
+    def abha_address(self) -> str:
+        return generate_abha_address(rng=self.generator.random)
+
+    def upi_id(self) -> str:
+        return generate_upi_id(rng=self.generator.random)
+
+    def indian_ration_card(self) -> str:
+        return generate_indian_ration_card(rng=self.generator.random)
+
+
+# ---------------------------------------------------------------------------
 # Spanish NIE (prefix + 7 digits + modulo-23 check letter)
 # ---------------------------------------------------------------------------
 
@@ -1927,6 +2014,7 @@ __all__ = [
     "FinancialIdentifierProvider",
     "GermanSteuerIdProvider",
     "HungarianTAJProvider",
+    "IndiaHealthIdProvider",
     "IndonesianNIKProvider",
     "IsraeliTeudatZehutProvider",
     "KoreanRRNProvider",
@@ -1956,10 +2044,13 @@ __all__ = [
     "generate_canadian_sin",
     "generate_danish_cpr",
     "generate_hungarian_taj",
+    "generate_abha_address",
+    "generate_abha_number",
     "generate_estonian_isikukood",
     "generate_iban",
     "generate_ontario_health_card",
     "generate_indonesian_nik",
+    "generate_indian_ration_card",
     "generate_jmbg",
     "generate_teudat_zehut",
     "generate_korean_rrn",
@@ -1976,6 +2067,7 @@ __all__ = [
     "generate_spanish_nie",
     "generate_ssn",
     "generate_thai_national_id",
+    "generate_upi_id",
     "generate_vietnamese_cccd",
     "generate_vietnamese_cmnd",
     "generate_uk_nhs_number",

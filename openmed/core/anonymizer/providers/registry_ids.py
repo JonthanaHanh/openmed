@@ -29,6 +29,8 @@ from typing import Any, Callable
 
 from openmed.core.pii_i18n import (
     validate_aadhaar,
+    validate_abha_address,
+    validate_abha_number,
     validate_bulgarian_egn,
     validate_croatian_oib,
     validate_czech_rodne_cislo,
@@ -41,6 +43,7 @@ from openmed.core.pii_i18n import (
     validate_german_steuer_id,
     validate_greek_amka,
     validate_hungarian_taj,
+    validate_indian_ration_card,
     validate_indonesian_nik,
     validate_israeli_teudat_zehut,
     validate_italian_codice_fiscale,
@@ -61,6 +64,7 @@ from openmed.core.pii_i18n import (
     validate_turkish_tckn,
     validate_uk_nhs_number,
     validate_uk_nino,
+    validate_upi_id,
     validate_vietnamese_cccd,
     validate_vietnamese_cmnd,
 )
@@ -76,6 +80,7 @@ from .clinical_ids import (
     EstonianIsikukoodProvider,
     GermanSteuerIdProvider,
     HungarianTAJProvider,
+    IndiaHealthIdProvider,
     IndonesianNIKProvider,
     IsraeliTeudatZehutProvider,
     KoreanRRNProvider,
@@ -284,6 +289,34 @@ def _register_builtin_specs() -> None:
         validate=validate_aadhaar,
         faker_method="aadhaar",
         faker_provider=AadhaarProvider,
+    )
+    _register_aliases(
+        ("in", "hi", "te", "en_IN", "hi_IN"),
+        id_type="abha_number",
+        validate=validate_abha_number,
+        faker_method="abha_number",
+        faker_provider=IndiaHealthIdProvider,
+    )
+    _register_aliases(
+        ("in", "hi", "te", "en_IN", "hi_IN"),
+        id_type="abha_address",
+        validate=validate_abha_address,
+        faker_method="abha_address",
+        faker_provider=IndiaHealthIdProvider,
+    )
+    _register_aliases(
+        ("in", "hi", "te", "en_IN", "hi_IN"),
+        id_type="upi_id",
+        validate=validate_upi_id,
+        faker_method="upi_id",
+        faker_provider=IndiaHealthIdProvider,
+    )
+    _register_aliases(
+        ("in", "hi", "te", "en_IN", "hi_IN"),
+        id_type="ration_card",
+        validate=validate_indian_ration_card,
+        faker_method="indian_ration_card",
+        faker_provider=IndiaHealthIdProvider,
     )
     _register_aliases(
         ("id", "id_ID"),

@@ -162,6 +162,14 @@ ID_SUBTYPE_MRN: Final = "mrn"
 ID_SUBTYPE_NPI: Final = "npi"
 ID_SUBTYPE_NATIONAL_ID: Final = "national_id"
 ID_SUBTYPE_SSN_ADJACENT: Final = "ssn_adjacent"
+#: Ayushman Bharat Health Account number; still normalizes to ID_NUM.
+ID_SUBTYPE_ABHA_NUMBER: Final = "abha_number"
+#: ABDM personal health record address; still normalizes to ID_NUM.
+ID_SUBTYPE_ABHA_ADDRESS: Final = "abha_address"
+#: Unified Payments Interface virtual payment address; still normalizes to ID_NUM.
+ID_SUBTYPE_UPI_ID: Final = "upi_id"
+#: Indian public-distribution ration card identifier; still normalizes to ID_NUM.
+ID_SUBTYPE_RATION_CARD: Final = "ration_card"
 #: ICAO 9303 passport/ID machine-readable zone; still normalizes to ID_NUM.
 ID_SUBTYPE_PASSPORT_MRZ: Final = "passport_mrz"
 #: China Unified Social Credit Code (organization-linked); normalizes to ID_NUM.
@@ -172,6 +180,10 @@ ID_SUBTYPES: Final[FrozenSet[str]] = frozenset(
         ID_SUBTYPE_NPI,
         ID_SUBTYPE_NATIONAL_ID,
         ID_SUBTYPE_SSN_ADJACENT,
+        ID_SUBTYPE_ABHA_NUMBER,
+        ID_SUBTYPE_ABHA_ADDRESS,
+        ID_SUBTYPE_UPI_ID,
+        ID_SUBTYPE_RATION_CARD,
         ID_SUBTYPE_PASSPORT_MRZ,
         ID_SUBTYPE_SOCIAL_CREDIT_CODE,
     }
@@ -731,6 +743,12 @@ _ALIAS_MAP: Final[Mapping[str, str]] = {
     "nie": ID_NUM,
     "bsn": ID_NUM,
     "aadhaar": ID_NUM,
+    "abhanumber": ID_NUM,
+    "abhaid": ID_NUM,
+    "abhaaddress": ID_NUM,
+    "upiid": ID_NUM,
+    "vpa": ID_NUM,
+    "rationcard": ID_NUM,
     "teudatzehut": ID_NUM,
     "tz": ID_NUM,
     "npi": ID_NUM,
@@ -959,6 +977,12 @@ ID_ALIAS_SUBTYPES: Final[Mapping[str, str]] = {
     "nie": ID_SUBTYPE_NATIONAL_ID,
     "bsn": ID_SUBTYPE_NATIONAL_ID,
     "aadhaar": ID_SUBTYPE_NATIONAL_ID,
+    "abhanumber": ID_SUBTYPE_ABHA_NUMBER,
+    "abhaid": ID_SUBTYPE_ABHA_NUMBER,
+    "abhaaddress": ID_SUBTYPE_ABHA_ADDRESS,
+    "upiid": ID_SUBTYPE_UPI_ID,
+    "vpa": ID_SUBTYPE_UPI_ID,
+    "rationcard": ID_SUBTYPE_RATION_CARD,
     "teudatzehut": ID_SUBTYPE_NATIONAL_ID,
     "tz": ID_SUBTYPE_NATIONAL_ID,
 }
@@ -1070,6 +1094,10 @@ __all__ = [
     "ID_SUBTYPE_NPI",
     "ID_SUBTYPE_NATIONAL_ID",
     "ID_SUBTYPE_SSN_ADJACENT",
+    "ID_SUBTYPE_ABHA_NUMBER",
+    "ID_SUBTYPE_ABHA_ADDRESS",
+    "ID_SUBTYPE_UPI_ID",
+    "ID_SUBTYPE_RATION_CARD",
     "ID_SUBTYPE_PASSPORT_MRZ",
     "ID_SUBTYPE_SOCIAL_CREDIT_CODE",
     "LABEL_METADATA",

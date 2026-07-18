@@ -32,6 +32,7 @@ class PIIPattern:
     - base_score: Low confidence for pattern-only matches (like Presidio's 0.01-0.3)
     - context_words: Keywords that boost confidence when found nearby
     - validator: Optional checksum/validation function to confirm matches
+    - context_required: Require nearby context for semantic-only recognition
     - safety_sweep_requires_context: Require nearby context before the
       deterministic safety sweep accepts this pattern
 
@@ -57,6 +58,7 @@ class PIIPattern:
     validator: Optional[Callable[[str], bool]] = (
         None  # Validation function (e.g., checksum)
     )
+    context_required: bool = False
     safety_sweep_requires_context: bool = False
 
 
@@ -615,13 +617,18 @@ def find_semantic_units(
             # Calculate score with context awareness
             score = pii_pattern.base_score
 
-            # Check for context words (like Presidio)
+            # Check for context words (like Presidio). Context-gated patterns
+            # are skipped entirely when their otherwise ambiguous shape has no
+            # nearby cue.
+            has_context = False
             if pii_pattern.context_words:
                 has_context = find_context_words(
                     text, match.start(), match.end(), pii_pattern.context_words
                 )
                 if has_context:
                     score = min(1.0, score + pii_pattern.context_boost)
+            if pii_pattern.context_required and not has_context:
+                continue
 
             # Validate if validator exists
             validated = True

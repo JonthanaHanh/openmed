@@ -114,7 +114,9 @@ def _collect_candidates(text: str, patterns: Sequence[PIIPattern]) -> list[_Cand
             matched_text = text[start:end]
             if not _validated(pattern, matched_text):
                 continue
-            if pattern.safety_sweep_requires_context and not _has_context(
+            if (
+                pattern.context_required or pattern.safety_sweep_requires_context
+            ) and not _has_context(
                 text,
                 start,
                 end,
