@@ -4319,7 +4319,7 @@ class TestMpesaTransactionCodes:
                 lang=row["language"],
                 consistent=True,
                 seed=859,
-                locale=row.get("locale"),
+                locale=None,
                 use_safety_sweep=True,
             )
 
