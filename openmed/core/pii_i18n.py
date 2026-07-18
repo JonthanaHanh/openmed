@@ -157,6 +157,30 @@ def validate_bic(text: str) -> bool:
     return clinical_ids.validate_bic(text)
 
 
+def validate_mpesa_transaction_code(text: str) -> bool:
+    """Validate a Kenya or Tanzania M-Pesa transaction code.
+
+    M-Pesa confirmation codes contain exactly ten uppercase ASCII letters or
+    digits, include at least one of each, and use a digit in the fourth
+    position. Detection remains context-gated because the shape alone also
+    occurs in laboratory and billing systems.
+
+    Args:
+        text: Candidate M-Pesa confirmation code.
+
+    Returns:
+        True when the candidate satisfies the offline-verifiable structure.
+    """
+
+    if not isinstance(text, str) or re.fullmatch(r"[A-Z0-9]{10}", text) is None:
+        return False
+    return (
+        text[3].isdigit()
+        and any(char.isalpha() for char in text)
+        and any(char.isdigit() for char in text)
+    )
+
+
 # ---------------------------------------------------------------------------
 # National ID Validators
 # ---------------------------------------------------------------------------
@@ -2062,6 +2086,20 @@ _CANADIAN_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
         ],
         context_boost=0.45,
         validator=validate_canadian_sin,
+    ),
+]
+
+_MPESA_TX_CODE_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        r"\b[A-Z0-9]{3}[0-9][A-Z0-9]{6}\b",
+        "mpesa_tx_code",
+        priority=12,
+        flags=0,
+        base_score=0.45,
+        context_words=["m-pesa", "mpesa", "confirmed", "muamala"],
+        context_boost=0.5,
+        validator=validate_mpesa_transaction_code,
+        safety_sweep_requires_context=True,
     ),
 ]
 
@@ -5136,6 +5174,9 @@ LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
     "fr_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
+    "sw": _MPESA_TX_CODE_PII_PATTERNS,
+    "en_ke": _MPESA_TX_CODE_PII_PATTERNS,
+    "en_tz": _MPESA_TX_CODE_PII_PATTERNS,
 }
 
 
@@ -5801,8 +5842,9 @@ def _locale_pattern_keys(lang: str, locale: str | None) -> list[str]:
     keys: list[str] = []
     if locale:
         keys.append(_normalize_pattern_locale(locale))
-    if "_" in lang or "-" in lang:
-        keys.append(_normalize_pattern_locale(lang))
+    normalized_lang = _normalize_pattern_locale(lang)
+    if "_" in lang or "-" in lang or normalized_lang in LOCALE_PII_PATTERNS:
+        keys.append(normalized_lang)
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -5836,7 +5878,10 @@ def get_patterns_for_language(lang: str, locale: str | None = None) -> List[PIIP
     Raises:
         ValueError: If the language is not supported
     """
-    supported_pattern_languages = SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES
+    locale_pattern_languages = {key.split("_", 1)[0] for key in LOCALE_PII_PATTERNS}
+    supported_pattern_languages = (
+        SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES | locale_pattern_languages
+    )
     base_lang = _normalize_pattern_language(lang)
     if base_lang not in supported_pattern_languages:
         raise ValueError(

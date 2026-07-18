@@ -48,6 +48,7 @@ from openmed.core.pii_i18n import (
     validate_korean_rrn,
     validate_latvian_personas_kods,
     validate_malaysian_mykad,
+    validate_mpesa_transaction_code,
     validate_philhealth_pin,
     validate_philsys_psn,
     validate_polish_pesel,
@@ -81,6 +82,7 @@ from .clinical_ids import (
     KoreanRRNProvider,
     LatvianPersonasKodsProvider,
     MalaysianMyKadProvider,
+    MpesaProvider,
     NPIProvider,
     OntarioHealthCardProvider,
     PhilippinesIdProvider,
@@ -523,6 +525,13 @@ def _register_builtin_specs() -> None:
         validate=validate_bc_phn,
         faker_method="bc_phn",
         faker_provider=BCPHNProvider,
+    )
+    _register_aliases(
+        ("ke", "tz", "sw", "en_ke", "en_tz"),
+        id_type="mpesa_tx_code",
+        validate=validate_mpesa_transaction_code,
+        faker_method="mpesa_transaction_code",
+        faker_provider=MpesaProvider,
     )
 
 

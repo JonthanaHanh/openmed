@@ -231,6 +231,20 @@ def _uscc_surrogate(faker, original):
     return generate_unified_social_credit_code(rng=faker.random)
 
 
+def _mpesa_surrogate(faker, original):
+    """Return an M-Pesa surrogate when ``original`` is a valid code."""
+
+    if not original:
+        return None
+    from openmed.core.pii_i18n import validate_mpesa_transaction_code
+
+    if not validate_mpesa_transaction_code(original):
+        return None
+    if not hasattr(faker, "mpesa_transaction_code"):
+        return None
+    return faker.mpesa_transaction_code(original)
+
+
 def _gen_id_num(faker, original, *, locale):
     mrz = _mrz_surrogate(faker, original)
     if mrz is not None:
@@ -238,6 +252,9 @@ def _gen_id_num(faker, original, *, locale):
     uscc = _uscc_surrogate(faker, original)
     if uscc is not None:
         return uscc
+    mpesa = _mpesa_surrogate(faker, original)
+    if mpesa is not None:
+        return mpesa
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
         return getattr(faker, method)()
