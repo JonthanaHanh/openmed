@@ -67,6 +67,7 @@ from openmed.core.pii_i18n import (
 
 from .clinical_ids import (
     AadhaarProvider,
+    AfricanPhoneProvider,
     AustralianMedicareProvider,
     AustralianTFNProvider,
     BCPHNProvider,
@@ -107,6 +108,10 @@ NationalIdValidator = Callable[[str], bool]
 NationalIdFormatter = Callable[[str], str]
 NationalIdProvider = type[Any]
 RegistryKey = tuple[str, str]
+
+AUXILIARY_FAKER_PROVIDER_CLASSES: tuple[NationalIdProvider, ...] = (
+    AfricanPhoneProvider,
+)
 
 
 def _normalize_key_part(value: str, *, field_name: str) -> str:
@@ -214,6 +219,16 @@ def national_id_faker_provider_classes() -> tuple[NationalIdProvider, ...]:
             providers.append(provider)
             seen.add(provider)
     return tuple(providers)
+
+
+def clinical_faker_provider_classes() -> tuple[NationalIdProvider, ...]:
+    """Return all registry-owned custom Faker provider classes once each."""
+
+    providers = [
+        *national_id_faker_provider_classes(),
+        *AUXILIARY_FAKER_PROVIDER_CLASSES,
+    ]
+    return tuple(dict.fromkeys(providers))
 
 
 def _register_aliases(
@@ -530,11 +545,13 @@ _register_builtin_specs()
 
 
 __all__ = [
+    "AUXILIARY_FAKER_PROVIDER_CLASSES",
     "ID_PROVIDER_REGISTRY",
     "NationalIdFormatter",
     "NationalIdProvider",
     "NationalIdSpec",
     "NationalIdValidator",
+    "clinical_faker_provider_classes",
     "get_national_id",
     "iter_national_ids",
     "national_id_faker_provider_classes",

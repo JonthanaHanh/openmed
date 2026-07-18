@@ -69,6 +69,10 @@ def _gen_email(faker, original, *, locale):
 
 def _gen_phone(faker, original, *, locale):
     if any(ch.isdigit() for ch in original):
+        if hasattr(faker, "african_phone"):
+            african_surrogate = faker.african_phone(original)
+            if african_surrogate is not None:
+                return african_surrogate
         return preserve_phone_format(original, rng=faker.random)
     return faker.phone_number()
 
