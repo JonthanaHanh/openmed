@@ -58,6 +58,7 @@ SUPPORTED_LANGUAGES: Set[str] = {
 # Languages with validator-backed national-ID coverage but no bundled default
 # PII model or full language pack yet.
 NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
+    "am",
     "pl",
     "lv",
     "sk",
@@ -73,6 +74,8 @@ NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
     "cs",
     "el",
     "vi",
+    "rw",
+    "sw",
 }
 
 LANGUAGE_NAMES: Dict[str, str] = {
@@ -435,6 +438,82 @@ def validate_aadhaar(text: str) -> bool:
     for i, digit in enumerate(reversed(digits)):
         c = _VERHOEFF_D[c][_VERHOEFF_P[i % 8][int(digit)]]
     return c == 0
+
+
+def validate_tanzania_nida(text: str) -> bool:
+    """Validate a Tanzania NIDA number's offline-verifiable fields.
+
+    NIDA numbers contain 20 digits and begin with an eight-digit Gregorian
+    birth date. Both the compact form and the commonly printed
+    ``YYYYMMDD-XXXXX-XXXXX-XX`` form are accepted.
+
+    Args:
+        text: Candidate NIDA number.
+
+    Returns:
+        True when the candidate has a supported shape and plausible birth date.
+    """
+    if not isinstance(text, str):
+        return False
+    stripped = text.strip()
+    if re.fullmatch(r"\d{20}|\d{8}-\d{5}-\d{5}-\d{2}", stripped) is None:
+        return False
+
+    digits = stripped.replace("-", "")
+    try:
+        birth_date = date(
+            int(digits[0:4]),
+            int(digits[4:6]),
+            int(digits[6:8]),
+        )
+    except ValueError:
+        return False
+    return date(1900, 1, 1) <= birth_date <= date.today()
+
+
+def validate_uganda_nin(text: str) -> bool:
+    """Validate the stable structure of a Uganda NIRA NIN.
+
+    The 14-character identifier starts with a class character (``C``, ``P``,
+    or ``R``) followed by the encoded gender character (``M`` or ``F``).
+    Remaining characters are alphanumeric and have no public checksum.
+    """
+    if not isinstance(text, str):
+        return False
+    return re.fullmatch(r"[CPR][MF][A-Z0-9]{12}", text.strip().upper()) is not None
+
+
+def validate_rwanda_id(text: str) -> bool:
+    """Validate offline-verifiable fields in a Rwanda national ID.
+
+    Rwanda IDs contain 16 digits. OpenMed checks the embedded four-digit birth
+    year and the public gender digit (``7`` for female or ``8`` for male).
+    Registry-backed status and security-code verification is intentionally not
+    attempted offline.
+    """
+    if not isinstance(text, str):
+        return False
+    digits = text.strip()
+    if re.fullmatch(r"\d{16}", digits) is None:
+        return False
+
+    birth_year = int(digits[1:5])
+    return 1900 <= birth_year <= date.today().year and digits[5] in {"7", "8"}
+
+
+def validate_ethiopia_fayda(text: str) -> bool:
+    """Validate Ethiopia's 12-digit Fayda identification number (FAN).
+
+    Fayda follows the MOSIP UIN contract: the first digit cannot be ``0`` or
+    ``1`` and the final digit is a Verhoeff check digit. This is the same
+    offline checksum and leading-digit rule used by Aadhaar.
+    """
+    if not isinstance(text, str):
+        return False
+    stripped = text.strip()
+    if re.fullmatch(r"\d{12}", stripped) is None:
+        return False
+    return validate_aadhaar(stripped)
 
 
 _CHINESE_RESIDENT_ID_WEIGHTS = (7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2)
@@ -5097,7 +5176,83 @@ _VIETNAMESE_PII_PATTERNS: List[PIIPattern] = [
 ]
 
 
+_TANZANIA_NIDA_PII_PATTERNS = [
+    PIIPattern(
+        r"(?<![A-Za-z0-9])(?:\d{20}|\d{8}-\d{5}-\d{5}-\d{2})(?![A-Za-z0-9])",
+        "national_id",
+        priority=12,
+        base_score=0.35,
+        context_words=[
+            "nida",
+            "nida number",
+            "namba ya nida",
+            "namba ya utambulisho",
+            "national identification number",
+        ],
+        context_boost=0.6,
+        validator=validate_tanzania_nida,
+        safety_sweep_requires_context=True,
+    ),
+]
+
+_UGANDA_NIN_PII_PATTERNS = [
+    PIIPattern(
+        r"(?<![A-Za-z0-9])[CPR][MF][A-Za-z0-9]{12}(?![A-Za-z0-9])",
+        "national_id",
+        priority=12,
+        base_score=0.35,
+        context_words=[
+            "nin",
+            "nira",
+            "nira nin",
+            "national id number",
+            "national identification number",
+        ],
+        context_boost=0.6,
+        validator=validate_uganda_nin,
+        safety_sweep_requires_context=True,
+    ),
+]
+
+_RWANDA_ID_PII_PATTERNS = [
+    PIIPattern(
+        r"(?<!\d)\d{16}(?!\d)",
+        "national_id",
+        priority=12,
+        base_score=0.35,
+        context_words=[
+            "indangamuntu",
+            "nimero y'indangamuntu",
+            "national id",
+            "national identification",
+        ],
+        context_boost=0.6,
+        validator=validate_rwanda_id,
+        safety_sweep_requires_context=True,
+    ),
+]
+
+_ETHIOPIA_FAYDA_PII_PATTERNS = [
+    PIIPattern(
+        r"(?<!\d)\d{12}(?!\d)",
+        "national_id",
+        priority=12,
+        base_score=0.7,
+        context_words=[
+            "fayda",
+            "fan",
+            "fayda number",
+            "fayda identification number",
+            "national id",
+        ],
+        context_boost=0.25,
+        validator=validate_ethiopia_fayda,
+    ),
+]
+
+
 LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "am": _ETHIOPIA_FAYDA_PII_PATTERNS,
     "fr": _FRENCH_PII_PATTERNS,
     "de": _GERMAN_PII_PATTERNS,
     "it": _ITALIAN_PII_PATTERNS,
@@ -5129,13 +5284,21 @@ LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "el": _GREEK_PII_PATTERNS,
     "cs": _CZECH_PII_PATTERNS,
     "vi": _VIETNAMESE_PII_PATTERNS,
+    "rw": _RWANDA_ID_PII_PATTERNS,
+    "sw": _TANZANIA_NIDA_PII_PATTERNS,
 }
 
 LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
+    "am": _ETHIOPIA_FAYDA_PII_PATTERNS,
+    "en_et": _ETHIOPIA_FAYDA_PII_PATTERNS,
+    "en_tz": _TANZANIA_NIDA_PII_PATTERNS,
+    "en_ug": _UGANDA_NIN_PII_PATTERNS,
     "en_gb": _UK_ENGLISH_PII_PATTERNS,
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
     "fr_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
+    "rw": _RWANDA_ID_PII_PATTERNS,
+    "sw": _TANZANIA_NIDA_PII_PATTERNS,
 }
 
 

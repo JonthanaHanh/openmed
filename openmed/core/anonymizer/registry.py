@@ -161,6 +161,7 @@ def _gen_age(faker, original, *, locale):
 # When the locale-appropriate ID method exists, we call it; otherwise we
 # format-preserve the original.
 _LOCALE_ID_METHODS = {
+    "am_ET": "ethiopia_fayda",
     "pt_BR": "cpf",
     "pt_PT": "nif",
     "fr_FR": "ssn",
@@ -172,6 +173,9 @@ _LOCALE_ID_METHODS = {
     "de_DE": "german_steuer_id",
     "en_US": "ssn",
     "en_GB": "nino",
+    "en_ET": "ethiopia_fayda",
+    "en_TZ": "tanzania_nida",
+    "en_UG": "uganda_nin",
     "tr_TR": "ssn",
     "he_IL": "teudat_zehut",
     "id_ID": "indonesian_nik",
@@ -193,7 +197,12 @@ _LOCALE_ID_METHODS = {
     "et_EE": "isikukood",
     "el_GR": "ssn",
     "vi_VN": "vietnamese_cccd",
+    "rw_RW": "rwanda_id",
+    "sw": "tanzania_nida",
+    "sw_TZ": "tanzania_nida",
 }
+
+_FIELD_PRESERVING_ID_METHODS = frozenset({"rwanda_id", "tanzania_nida", "uganda_nin"})
 
 
 _MRZ_CHARSET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<")
@@ -240,6 +249,8 @@ def _gen_id_num(faker, original, *, locale):
         return uscc
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
+        if method in _FIELD_PRESERVING_ID_METHODS:
+            return getattr(faker, method)(original)
         return getattr(faker, method)()
     return preserve_id_pattern(original, rng=faker.random)
 

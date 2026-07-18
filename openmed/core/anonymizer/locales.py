@@ -35,6 +35,7 @@ from typing import Final, Mapping
 # locales are backed by another installed Faker locale at runtime; see
 # ``FAKER_BACKEND_LOCALE``.
 LANG_TO_LOCALE: Final[Mapping[str, str]] = {
+    "am": "am_ET",  # Faker has no Amharic locale; backed by en_US
     "en": "en_US",
     "fr": "fr_FR",
     "de": "de_DE",
@@ -68,20 +69,28 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "et": "et_EE",
     "el": "el_GR",
     "vi": "vi_VN",
+    "rw": "rw_RW",  # Faker has no Kinyarwanda locale; backed by en_US
+    "sw": "sw",
 }
 
 
 # Languages whose default locale is a known approximation rather than a
 # direct match. Used to emit a one-time warning so callers can override.
-_APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
+_APPROXIMATE_LOCALES: Final = frozenset({"am", "ms", "rw", "sr", "te"})
 
 
 # Conceptual locale -> installed Faker locale. This keeps national-ID dispatch
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
+    "am_ET": "en_US",
+    "en_ET": "en_US",
+    "en_TZ": "en_US",
+    "en_UG": "en_US",
     "ms_MY": "id_ID",
+    "rw_RW": "en_US",
     "sr_RS": "hr_HR",
+    "sw_TZ": "sw",
 }
 
 
@@ -97,6 +106,7 @@ FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
 # locale-aware dispatch (``registry._LOCALE_ID_METHODS``); the regression suite
 # asserts that and the round-trip.
 NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
+    "am": ("am_ET", "ethiopia_fayda"),  # Fayda FAN (Verhoeff)
     "en": ("en_US", "ssn"),
     "fr": ("fr_FR", "ssn"),  # NIR / INSEE
     "de": ("de_DE", "german_steuer_id"),  # Steuer-ID
@@ -129,6 +139,8 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
     "et": ("et_EE", "isikukood"),  # Estonian isikukood
     "el": ("el_GR", "ssn"),  # Greek AMKA (Faker's native el_GR ssn)
     "vi": ("vi_VN", "vietnamese_cccd"),  # 12-digit CCCD
+    "rw": ("rw_RW", "rwanda_id"),  # Rwanda national ID
+    "sw": ("sw", "tanzania_nida"),  # Tanzania NIDA
 }
 
 
@@ -203,6 +215,10 @@ def resolve_locale(lang: str, locale_override: str | None = None) -> str:
     # keeps the existing ar_EG default below unchanged.
     if lang.startswith("ar-"):
         return _resolve_arabic_region(lang)
+
+    normalized_lang = lang.replace("-", "_")
+    if normalized_lang in FAKER_BACKEND_LOCALE:
+        return normalized_lang
 
     locale = LANG_TO_LOCALE.get(lang)
     if locale is None:
