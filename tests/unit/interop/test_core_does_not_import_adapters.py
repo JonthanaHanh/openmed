@@ -14,8 +14,10 @@ OPTIONAL_ADAPTER_MODULE_PREFIXES = (
     "polars",
     "pyDeid",
     "pydeid",
+    "quickumls",
     "gliner",
     "llama_index",
+    "scispacy",
     "spacy",
 )
 
@@ -61,6 +63,8 @@ def test_import_interop_registry_does_not_import_optional_adapter_dependencies()
         "polars",
         "presidio",
         "pydeid",
+        "quickumls",
+        "scispacy_linker",
         "spacy",
     )
     assert adapter_spec("cda").extra == "core"
@@ -76,6 +80,8 @@ def test_import_interop_registry_does_not_import_optional_adapter_dependencies()
     assert adapter_spec("philter").extra == "philter"
     assert adapter_spec("polars").extra == "polars"
     assert adapter_spec("pydeid").extra == "pydeid"
+    assert adapter_spec("quickumls").extra == "quickumls"
+    assert adapter_spec("scispacy_linker").extra == "scispacy"
     assert adapter_spec("gliner_biomed").extra == "gliner"
     assert adapter_spec("spacy").extra == "spacy"
     assert not any(_is_optional_adapter_module(name) for name in sys.modules)
