@@ -81,6 +81,7 @@ REVIEWED_LICENSES = {
     "mkdocs-git-revision-date-localized-plugin": "MIT",
     "mkdocs-material": "MIT",
     "mkdocs-minify-plugin": "MIT",
+    "mkdocs-static-i18n": "MIT",
     "mkdocstrings": "ISC",
     "mlx": "MIT",
     "mlx-lm": "MIT",
