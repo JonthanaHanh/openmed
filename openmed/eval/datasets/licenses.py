@@ -49,6 +49,36 @@ PUBLIC_DATASET_LICENSES: Mapping[str, DatasetLicense] = {
             "archive locally and stores no corpus rows in the repository."
         ),
     ),
+    "cblue": DatasetLicense(
+        dataset="cblue",
+        license_id="CBLUE-access-controlled",
+        source_url="https://tianchi.aliyun.com/dataset/95414",
+        redistribution="user-supplied",
+        notes=(
+            "CBLUE access and usage terms apply. OpenMed never downloads, "
+            "caches, or redistributes the benchmark corpus."
+        ),
+    ),
+    "cmeee": DatasetLicense(
+        dataset="cmeee",
+        license_id="CBLUE-access-controlled",
+        source_url="https://tianchi.aliyun.com/dataset/95414",
+        redistribution="user-supplied",
+        notes=(
+            "CMeEE is the CBLUE clinical NER task. Supply an authorized local "
+            "copy through OPENMED_CMEEE_PATH."
+        ),
+    ),
+    "naamapadam": DatasetLicense(
+        dataset="naamapadam",
+        license_id="CC0-1.0",
+        source_url="https://huggingface.co/datasets/ai4bharat/naamapadam",
+        redistribution="reference-only",
+        notes=(
+            "AI4Bharat publishes the dataset packaging under CC0-1.0. OpenMed "
+            "loads user-supplied copies by reference and bundles no corpus rows."
+        ),
+    ),
     "medmentions": DatasetLicense(
         dataset="medmentions",
         license_id="CC0-1.0",
@@ -116,7 +146,7 @@ def license_for(dataset: str) -> DatasetLicense:
     try:
         return PUBLIC_DATASET_LICENSES[dataset]
     except KeyError as exc:
-        raise ValueError(f"unknown public dataset: {dataset}") from exc
+        raise ValueError(f"unknown dataset license: {dataset}") from exc
 
 
 __all__ = ["DatasetLicense", "PUBLIC_DATASET_LICENSES", "license_for"]
