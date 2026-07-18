@@ -18,6 +18,14 @@ from .cache import (
     NormalizationCacheStats,
     make_normalization_cache_key,
 )
+from .india import (
+    INDIAN_CLINICAL_ABBREVIATIONS,
+    INDIAN_CLINICAL_NORMALIZATION_VERSION,
+    IndianClinicalNormalization,
+    normalize_indian_clinical_abbreviation,
+    normalize_indian_clinical_entities,
+    normalize_indian_clinical_surface,
+)
 from .ranker import (
     SYNTHETIC_GOLD_SET,
     CandidateProvenance,
@@ -35,6 +43,9 @@ __all__ = [
     "CodeSystemMetadata",
     "ConceptNormalizationCache",
     "ConceptNormalizer",
+    "INDIAN_CLINICAL_ABBREVIATIONS",
+    "INDIAN_CLINICAL_NORMALIZATION_VERSION",
+    "IndianClinicalNormalization",
     "NormalizationCacheStats",
     "NormalizationEvaluationResult",
     "NormalizationGoldCase",
@@ -48,6 +59,9 @@ __all__ = [
     "evaluate_normalization_gold",
     "generate_query_variants",
     "make_normalization_cache_key",
+    "normalize_indian_clinical_abbreviation",
+    "normalize_indian_clinical_entities",
+    "normalize_indian_clinical_surface",
     "normalize_surface",
     "validate_backend_identity",
 ]

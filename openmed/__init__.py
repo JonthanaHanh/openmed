@@ -51,12 +51,15 @@ from .core.pii_entity_merger import (
     calculate_dominant_label,
     find_semantic_units,
     merge_entities_with_semantic_units,
+    merge_india_code_mixed_spans,
 )
 from .core.pii_i18n import (
     DEFAULT_PII_MODELS,
     LANGUAGE_PII_PATTERNS,
     SUPPORTED_LANGUAGES,
+    get_india_clinical_model_route,
     get_patterns_for_language,
+    india_clinical_route_active,
 )
 from .core.redaction_preview import redaction_preview, render_redaction_preview
 from .core.result_cache import (
@@ -728,6 +731,7 @@ __all__ = [
     "render_redaction_preview",
     # PII entity merging utilities
     "merge_entities_with_semantic_units",
+    "merge_india_code_mixed_spans",
     "find_semantic_units",
     "calculate_dominant_label",
     "PII_PATTERNS",
@@ -736,7 +740,9 @@ __all__ = [
     "SUPPORTED_LANGUAGES",
     "DEFAULT_PII_MODELS",
     "LANGUAGE_PII_PATTERNS",
+    "get_india_clinical_model_route",
     "get_patterns_for_language",
+    "india_clinical_route_active",
     # Canonical label taxonomy
     "CANONICAL_LABELS",
     "normalize_label",
