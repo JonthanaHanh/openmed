@@ -1338,7 +1338,10 @@ def _resolved_audit_profile(
     normalize_accents: Optional[bool],
     use_smart_merging: bool,
     use_safety_sweep: bool,
+    config: Any = None,
 ) -> dict[str, Any]:
+    from .offline import offline_mode_assertion
+
     return {
         "method": method,
         "model_name": model_name,
@@ -1349,6 +1352,7 @@ def _resolved_audit_profile(
         "normalize_accents": normalize_accents,
         "use_smart_merging": bool(use_smart_merging),
         "use_safety_sweep": bool(use_safety_sweep),
+        "offline_assertion": offline_mode_assertion(config),
     }
 
 
@@ -1409,6 +1413,7 @@ def _build_audit_report(
     use_smart_merging: bool,
     use_safety_sweep: bool,
     policy: str,
+    config: Any = None,
 ) -> Any:
     from ..__about__ import __version__
     from .audit import AuditReport, hash_text, manifest_hash
@@ -1445,6 +1450,7 @@ def _build_audit_report(
             normalize_accents=normalize_accents,
             use_smart_merging=use_smart_merging,
             use_safety_sweep=use_safety_sweep,
+            config=config,
         ),
         detectors=_detector_infos(
             pii_result,
@@ -1494,6 +1500,7 @@ def _build_deidentification_result(
     policy_name: Optional[str] = None,
     policy: str = "hipaa_safe_harbor",
     audit: bool = False,
+    config: Any = None,
 ) -> DeidentificationResult:
     """Build a de-identification result from an existing PII result."""
     from .labels import normalize_label
@@ -1651,6 +1658,7 @@ def _build_deidentification_result(
             use_smart_merging=use_smart_merging,
             use_safety_sweep=use_safety_sweep,
             policy=policy,
+            config=config,
         )
 
     return DeidentificationResult(
