@@ -74,6 +74,7 @@ MASKED_NUMBER: Final = "MASKED_NUMBER"
 
 #: Demographics
 GENDER: Final = "GENDER"
+ETHNICITY: Final = "ETHNICITY"
 EYE_COLOR: Final = "EYE_COLOR"
 HEIGHT: Final = "HEIGHT"
 
@@ -222,6 +223,7 @@ CANONICAL_LABELS: Final[FrozenSet[str]] = frozenset(
         LITECOIN_ADDRESS,
         MASKED_NUMBER,
         GENDER,
+        ETHNICITY,
         EYE_COLOR,
         HEIGHT,
         ORGANIZATION,
@@ -290,11 +292,13 @@ CANONICAL_LABELS: Final[FrozenSet[str]] = frozenset(
 
 DIRECT_IDENTIFIER: Final = "DIRECT_IDENTIFIER"
 QUASI_IDENTIFIER: Final = "QUASI_IDENTIFIER"
+SENSITIVE_ATTRIBUTE: Final = "SENSITIVE_ATTRIBUTE"
 CLINICAL_CONCEPT: Final = "CLINICAL_CONCEPT"
 POLICY_LABELS: Final[FrozenSet[str]] = frozenset(
     {
         DIRECT_IDENTIFIER,
         QUASI_IDENTIFIER,
+        SENSITIVE_ATTRIBUTE,
         CLINICAL_CONCEPT,
     }
 )
@@ -419,6 +423,7 @@ LABEL_METADATA: Final[Mapping[str, Mapping[str, object]]] = {
     MASKED_NUMBER: _label_metadata(DIRECT_IDENTIFIER, RISK_HIGH),
     # Demographics
     GENDER: _label_metadata(QUASI_IDENTIFIER, RISK_MEDIUM),
+    ETHNICITY: _label_metadata(SENSITIVE_ATTRIBUTE, RISK_HIGH),
     EYE_COLOR: _label_metadata(QUASI_IDENTIFIER, RISK_MEDIUM),
     HEIGHT: _label_metadata(QUASI_IDENTIFIER, RISK_MEDIUM),
     # Work
@@ -574,6 +579,7 @@ LABEL_TO_HIPAA: Final[Mapping[str, str]] = {
     MASKED_NUMBER: HIPAA_ACCOUNT_NUMBER,
     # Demographics
     GENDER: HIPAA_UNIQUE_IDENTIFIER,
+    ETHNICITY: HIPAA_UNIQUE_IDENTIFIER,
     EYE_COLOR: HIPAA_UNIQUE_IDENTIFIER,
     HEIGHT: HIPAA_UNIQUE_IDENTIFIER,
     # Work
@@ -800,6 +806,12 @@ _ALIAS_MAP: Final[Mapping[str, str]] = {
     # Demographics
     "gender": GENDER,
     "sex": GENDER,
+    "ethnicity": ETHNICITY,
+    "ethnicorigin": ETHNICITY,
+    "race": ETHNICITY,
+    "racialorigin": ETHNICITY,
+    "tribe": ETHNICITY,
+    "tribalaffiliation": ETHNICITY,
     "eyecolor": EYE_COLOR,
     "height": HEIGHT,
     # Work
@@ -1135,6 +1147,7 @@ __all__ = [
     "POLICY_LABELS",
     "DIRECT_IDENTIFIER",
     "QUASI_IDENTIFIER",
+    "SENSITIVE_ATTRIBUTE",
     "CLINICAL_CONCEPT",
     "RISK_LEVELS",
     "RISK_LOW",
@@ -1184,6 +1197,7 @@ __all__ = [
     "LITECOIN_ADDRESS",
     "MASKED_NUMBER",
     "GENDER",
+    "ETHNICITY",
     "EYE_COLOR",
     "HEIGHT",
     "ORGANIZATION",

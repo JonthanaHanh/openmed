@@ -7,6 +7,7 @@ from openmed.core.labels import (
     CANONICAL_LABELS,
     CLINICAL_CONCEPT,
     DIRECT_IDENTIFIER,
+    ETHNICITY,
     HIPAA_SAFE_HARBOR_CLASSES,
     LABEL_METADATA,
     LABEL_TO_HIPAA,
@@ -14,6 +15,7 @@ from openmed.core.labels import (
     QUASI_IDENTIFIER,
     RISK_LEVELS,
     RISK_MEDIUM,
+    SENSITIVE_ATTRIBUTE,
     ZIPCODE,
     hipaa_class_for,
     normalize_label,
@@ -26,7 +28,7 @@ ALLOWED_SYSTEM_HINTS = {"RxNorm", "LOINC", "ICD-10-CM", "HPO", "SNOMED"}
 
 
 def test_metadata_tables_cover_canonical_labels_exactly():
-    assert len(CANONICAL_LABELS) == 95
+    assert len(CANONICAL_LABELS) == 96
     assert set(LABEL_METADATA) == CANONICAL_LABELS
     assert set(LABEL_TO_HIPAA) == CANONICAL_LABELS
 
@@ -66,6 +68,12 @@ def test_acceptance_specific_direct_and_quasi_labels():
         assert label in CANONICAL_LABELS
         assert policy_label_for(label) == QUASI_IDENTIFIER
         assert risk_level_for(label) == RISK_MEDIUM
+
+
+def test_ethnicity_resolves_to_sensitive_attribute_policy_class():
+    assert normalize_label("ethnic_origin") == ETHNICITY
+    assert normalize_label("tribal_affiliation") == ETHNICITY
+    assert policy_label_for(ETHNICITY) == SENSITIVE_ATTRIBUTE
 
 
 def test_label_to_hipaa_is_many_to_one():
