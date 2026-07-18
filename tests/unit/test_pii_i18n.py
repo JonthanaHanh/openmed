@@ -59,6 +59,7 @@ from openmed.core.pii_i18n import (
     validate_korean_rrn,
     validate_latvian_personas_kods,
     validate_malaysian_mykad,
+    validate_norwegian_fodselsnummer,
     validate_philhealth_pin,
     validate_philsys_psn,
     validate_portuguese_cnpj,
@@ -66,6 +67,7 @@ from openmed.core.pii_i18n import (
     validate_portuguese_nif,
     validate_spanish_dni,
     validate_spanish_nie,
+    validate_swedish_personnummer,
     validate_thai_national_id,
     validate_turkish_tckn,
     validate_vietnamese_cccd,
@@ -99,6 +101,9 @@ class TestConstants:
             "th",
             "ko",
             "ro",
+            "sv",
+            "da",
+            "no",
         }
 
     def test_national_id_only_languages(self):
@@ -108,7 +113,6 @@ class TestConstants:
             "sk",
             "ms",
             "tl",
-            "da",
             "hu",
             "et",
             "sr",
@@ -141,6 +145,9 @@ class TestConstants:
         assert LANGUAGE_MODEL_PREFIX["th"] == "Thai-"
         assert LANGUAGE_MODEL_PREFIX["ko"] == "Korean-"
         assert LANGUAGE_MODEL_PREFIX["ro"] == "Romanian-"
+        assert LANGUAGE_MODEL_PREFIX["sv"] == "Swedish-"
+        assert LANGUAGE_MODEL_PREFIX["da"] == "Danish-"
+        assert LANGUAGE_MODEL_PREFIX["no"] == "Norwegian-"
 
     def test_default_pii_models_all_languages(self):
         assert set(DEFAULT_PII_MODELS.keys()) == SUPPORTED_LANGUAGES
@@ -165,6 +172,9 @@ class TestConstants:
             == "OpenMed/OpenMed-PII-Korean-NomicMed-Large-395M-v1"
         )
         assert DEFAULT_PII_MODELS["ro"] == "OpenMed/privacy-filter-multilingual"
+        assert DEFAULT_PII_MODELS["sv"] == "OpenMed/privacy-filter-multilingual"
+        assert DEFAULT_PII_MODELS["da"] == "OpenMed/privacy-filter-multilingual"
+        assert DEFAULT_PII_MODELS["no"] == "OpenMed/privacy-filter-multilingual"
         # English has no language prefix
         assert "French" not in DEFAULT_PII_MODELS["en"]
         assert "German" not in DEFAULT_PII_MODELS["en"]
@@ -909,6 +919,58 @@ class TestValidateDanishCPR:
         assert validate_danish_cpr(surrogate) is True
 
 
+class TestValidateSwedishPersonnummer:
+    """Tests for Swedish personnummer structure and Luhn validation."""
+
+    @pytest.mark.parametrize(
+        "value",
+        ["510312-1140", "5103121140", "19510312-1140", "510312+1140"],
+    )
+    def test_accepts_checksum_valid_values(self, value):
+        assert validate_swedish_personnummer(value) is True
+
+    @pytest.mark.parametrize(
+        "value",
+        ["510312-1141", "19510229-1140", "510312-11-40", "510312-114"],
+    )
+    def test_rejects_corrupt_or_malformed_values(self, value):
+        assert validate_swedish_personnummer(value) is False
+
+    def test_generated_surrogate_passes_validator(self):
+        assert LANG_TO_LOCALE["sv"] == "sv_SE"
+        anonymizer = Anonymizer(lang="sv", consistent=True, seed=42)
+
+        surrogate = anonymizer.surrogate("510312-1140", "national_id")
+
+        assert validate_swedish_personnummer(surrogate) is True
+
+
+class TestValidateNorwegianFodselsnummer:
+    """Tests for Norwegian fødselsnummer double modulus-11 validation."""
+
+    @pytest.mark.parametrize(
+        "value",
+        ["12035101460", "03088608002", "06114737664"],
+    )
+    def test_accepts_checksum_valid_values(self, value):
+        assert validate_norwegian_fodselsnummer(value) is True
+
+    @pytest.mark.parametrize(
+        "value",
+        ["12035101461", "32018512345", "120351-01460", "1203510146"],
+    )
+    def test_rejects_corrupt_or_malformed_values(self, value):
+        assert validate_norwegian_fodselsnummer(value) is False
+
+    def test_generated_surrogate_passes_validator(self):
+        assert LANG_TO_LOCALE["no"] == "no_NO"
+        anonymizer = Anonymizer(lang="no", consistent=True, seed=42)
+
+        surrogate = anonymizer.surrogate("12035101460", "national_id")
+
+        assert validate_norwegian_fodselsnummer(surrogate) is True
+
+
 class TestValidateHungarianTaj:
     """Tests for validate_hungarian_taj()."""
 
@@ -1086,6 +1148,14 @@ class TestLanguagePIIPatterns:
     def test_danish_patterns_exist(self):
         assert "da" in LANGUAGE_PII_PATTERNS
         assert len(LANGUAGE_PII_PATTERNS["da"]) > 0
+
+    def test_swedish_patterns_exist(self):
+        assert "sv" in LANGUAGE_PII_PATTERNS
+        assert len(LANGUAGE_PII_PATTERNS["sv"]) > 0
+
+    def test_norwegian_patterns_exist(self):
+        assert "no" in LANGUAGE_PII_PATTERNS
+        assert len(LANGUAGE_PII_PATTERNS["no"]) > 0
 
     def test_korean_patterns_exist(self):
         assert "ko" in LANGUAGE_PII_PATTERNS
@@ -1643,6 +1713,14 @@ class TestLanguagePIIPatterns:
             matched = any(re.search(p.pattern, text, p.flags) for p in patterns)
             assert matched, f"Danish phone pattern should match '{text}'"
 
+    @pytest.mark.parametrize("lang", ["da", "no"])
+    def test_nordic_phone_patterns_do_not_match_iso_dates(self, lang):
+        patterns = [
+            p for p in LANGUAGE_PII_PATTERNS[lang] if p.entity_type == "phone_number"
+        ]
+
+        assert not any(re.search(p.pattern, "1985-08-17", p.flags) for p in patterns)
+
     def test_danish_cpr_pattern(self):
         patterns = [
             p for p in LANGUAGE_PII_PATTERNS["da"] if p.entity_type == "national_id"
@@ -1752,6 +1830,61 @@ class TestLanguagePIIPatterns:
         }
         observed = set()
         for pattern in get_patterns_for_language("da"):
+            for match in re.finditer(pattern.pattern, text, pattern.flags):
+                value = match.group(0)
+                if pattern.validator is not None and not pattern.validator(value):
+                    continue
+                observed.add((pattern.entity_type, match.start(), match.end(), value))
+
+        assert expected <= observed
+
+    @pytest.mark.parametrize(
+        ("lang", "text", "expected"),
+        [
+            (
+                "sv",
+                "Patient Anna Andersson född 1985-08-17. Telefon "
+                "+46 70 123 45 67. Personnummer 510312-1140. Adress "
+                "Södra Förstadsgatan 12, 211 43 Malmö.",
+                {
+                    ("date", 28, 38, "1985-08-17"),
+                    ("phone_number", 48, 64, "+46 70 123 45 67"),
+                    ("national_id", 79, 90, "510312-1140"),
+                    ("street_address", 99, 121, "Södra Förstadsgatan 12"),
+                    ("postcode", 123, 129, "211 43"),
+                },
+            ),
+            (
+                "da",
+                "Patient Anna Nielsen født 1985-08-17. Telefon "
+                "+45 20 12 34 56. CPR 170885-1234. Adresse "
+                "Nørrebrogade 12, 2200 København.",
+                {
+                    ("date", 26, 36, "1985-08-17"),
+                    ("phone_number", 46, 61, "+45 20 12 34 56"),
+                    ("national_id", 67, 78, "170885-1234"),
+                    ("street_address", 88, 103, "Nørrebrogade 12"),
+                    ("postcode", 105, 109, "2200"),
+                },
+            ),
+            (
+                "no",
+                "Pasient Ingrid Hansen født 1985-08-17. Telefon "
+                "+47 91 23 45 67. Fødselsnummer 12035101460. Adresse "
+                "Dronning Eufemias gate 16, 0154 Oslo.",
+                {
+                    ("date", 27, 37, "1985-08-17"),
+                    ("phone_number", 47, 62, "+47 91 23 45 67"),
+                    ("national_id", 78, 89, "12035101460"),
+                    ("street_address", 99, 124, "Dronning Eufemias gate 16"),
+                    ("postcode", 126, 130, "0154"),
+                },
+            ),
+        ],
+    )
+    def test_nordic_clinical_samples_expected_spans(self, lang, text, expected):
+        observed = set()
+        for pattern in get_patterns_for_language(lang):
             for match in re.finditer(pattern.pattern, text, pattern.flags):
                 value = match.group(0)
                 if pattern.validator is not None and not pattern.validator(value):
@@ -2270,6 +2403,12 @@ class TestGetPatternsForLanguage:
         lang_count = len(LANGUAGE_PII_PATTERNS["da"])
         assert len(da_patterns) == base_count + lang_count
 
+    @pytest.mark.parametrize("lang", ["sv", "no"])
+    def test_other_nordic_languages_include_base_and_language(self, lang):
+        patterns = get_patterns_for_language(lang)
+        base_count = len(PII_PATTERNS) + len(MRZ_PII_PATTERNS) + len(USCC_PII_PATTERNS)
+        assert len(patterns) == base_count + len(LANGUAGE_PII_PATTERNS[lang])
+
     def test_korean_includes_base_and_language(self):
         ko_patterns = get_patterns_for_language("ko")
         base_count = len(PII_PATTERNS) + len(MRZ_PII_PATTERNS) + len(USCC_PII_PATTERNS)
@@ -2730,19 +2869,34 @@ class TestTagalogLocaleAndFixture:
             assert text[start:end] == value, label
 
 
-class TestDanishLocaleAndFixture:
-    """Tests for Danish locale and golden fixture wiring."""
+class TestNordicLocaleAndFixtures:
+    """Tests for Nordic locale, surrogate, and golden fixture wiring."""
 
-    def test_locale_and_surrogate_cpr_round_trip(self):
-        assert LANG_TO_LOCALE["da"] == "da_DK"
-        anon = Anonymizer(lang="da", consistent=True, seed=42)
+    @pytest.mark.parametrize(
+        ("lang", "locale", "original", "validator"),
+        [
+            ("sv", "sv_SE", "510312-1140", validate_swedish_personnummer),
+            ("da", "da_DK", "170885-1234", validate_danish_cpr),
+            ("no", "no_NO", "12035101460", validate_norwegian_fodselsnummer),
+        ],
+    )
+    def test_locale_and_national_id_surrogate_round_trip(
+        self,
+        lang,
+        locale,
+        original,
+        validator,
+    ):
+        assert LANG_TO_LOCALE[lang] == locale
+        anonymizer = Anonymizer(lang=lang, consistent=True, seed=42)
 
-        surrogate = anon.surrogate("170885-1234", "national_id")
+        surrogate = anonymizer.surrogate(original, "national_id")
 
-        assert validate_danish_cpr(surrogate) is True
+        assert validator(surrogate) is True
 
-    def test_i18n_golden_fixture_offsets(self):
-        fixture_path = Path("openmed/eval/golden/fixtures/i18n/da.jsonl")
+    @pytest.mark.parametrize("lang", ["sv", "da", "no"])
+    def test_i18n_golden_fixture_offsets_and_patterns(self, lang):
+        fixture_path = Path(f"openmed/eval/golden/fixtures/i18n/{lang}.jsonl")
         rows = [
             json.loads(line)
             for line in fixture_path.read_text(encoding="utf-8").splitlines()
@@ -2751,25 +2905,35 @@ class TestDanishLocaleAndFixture:
 
         assert len(rows) == 1
         row = rows[0]
-        assert row["language"] == "da"
+        assert row["language"] == lang
         assert row["metadata"]["synthetic"] is True
         assert row["metadata"]["category"] == "multilingual"
 
         text = row["text"]
-        expected = {
-            ("DATE", 27, 37, "17/08/1985"),
-            ("PHONE", 47, 62, "+45 20 12 34 56"),
-            ("ID_NUM", 68, 79, "170885-1234"),
-            ("STREET_ADDRESS", 89, 100, "Bredgade 12"),
-            ("ZIPCODE", 102, 106, "1260"),
+        observed = set()
+        for pattern in get_patterns_for_language(lang):
+            for match in re.finditer(pattern.pattern, text, pattern.flags):
+                value = match.group(0)
+                if pattern.validator is not None and not pattern.validator(value):
+                    continue
+                observed.add((pattern.entity_type, match.start(), match.end(), value))
+
+        label_to_entity = {
+            "DATE": "date",
+            "PHONE": "phone_number",
+            "ID_NUM": "national_id",
+            "STREET_ADDRESS": "street_address",
+            "ZIPCODE": "postcode",
         }
-        actual = {
-            (span["label"], span["start"], span["end"], span["text"])
-            for span in row["gold_spans"]
-        }
-        assert actual == expected
-        for label, start, end, value in actual:
-            assert text[start:end] == value, label
+        for span in row["gold_spans"]:
+            value = span["text"]
+            assert text[span["start"] : span["end"]] == value
+            assert (
+                label_to_entity[span["label"]],
+                span["start"],
+                span["end"],
+                value,
+            ) in observed
 
 
 def test_validate_latvian_personas_kods():

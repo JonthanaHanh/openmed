@@ -53,6 +53,9 @@ SUPPORTED_LANGUAGES: Set[str] = {
     "th",
     "ko",
     "ro",
+    "sv",
+    "da",
+    "no",
 }
 
 # Languages with validator-backed national-ID coverage but no bundled default
@@ -63,7 +66,6 @@ NATIONAL_ID_ONLY_LANGUAGES: Set[str] = {
     "sk",
     "ms",
     "tl",
-    "da",
     "hu",
     "et",
     "sr",
@@ -93,6 +95,9 @@ LANGUAGE_NAMES: Dict[str, str] = {
     "th": "Thai",
     "ko": "Korean",
     "ro": "Romanian",
+    "sv": "Swedish",
+    "da": "Danish",
+    "no": "Norwegian",
 }
 
 LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
@@ -113,6 +118,9 @@ LANGUAGE_MODEL_PREFIX: Dict[str, str] = {
     "th": "Thai-",
     "ko": "Korean-",
     "ro": "Romanian-",
+    "sv": "Swedish-",
+    "da": "Danish-",
+    "no": "Norwegian-",
 }
 
 DEFAULT_PII_MODELS: Dict[str, str] = {
@@ -133,6 +141,9 @@ DEFAULT_PII_MODELS: Dict[str, str] = {
     "th": "OpenMed/privacy-filter-multilingual",
     "ko": "OpenMed/OpenMed-PII-Korean-NomicMed-Large-395M-v1",
     "ro": "OpenMed/privacy-filter-multilingual",
+    "sv": "OpenMed/privacy-filter-multilingual",
+    "da": "OpenMed/privacy-filter-multilingual",
+    "no": "OpenMed/privacy-filter-multilingual",
 }
 
 
@@ -857,6 +868,51 @@ def validate_philhealth_pin(text: str) -> bool:
     return _matches_digit_grouping(text, (2, 9, 1))
 
 
+def validate_swedish_personnummer(text: str) -> bool:
+    """Validate a Swedish personnummer using its Luhn control digit.
+
+    Accepted presentations contain either ten digits (``YYMMDD-NNNC``) or
+    twelve digits (``YYYYMMDD-NNNC``). A plus sign may replace the separator
+    for people aged 100 or older. The Luhn calculation always uses the final
+    ten digits, beginning with the two-digit year.
+    """
+    if not isinstance(text, str):
+        return False
+
+    stripped = text.strip()
+    if (
+        re.fullmatch(
+            r"(?:[0-9]{6}|[0-9]{8})(?:[-+]?[0-9]{4})",
+            stripped,
+        )
+        is None
+    ):
+        return False
+
+    digits = re.sub(r"[-+]", "", stripped)
+    if len(digits) == 12:
+        year = int(digits[0:4])
+        date_digits = digits[2:8]
+        luhn_digits = digits[2:]
+    else:
+        year = 2000 + int(digits[0:2])
+        date_digits = digits[0:6]
+        luhn_digits = digits
+
+    month = int(date_digits[2:4])
+    day = int(date_digits[4:6])
+    try:
+        date(year, month, day)
+    except ValueError:
+        return False
+
+    total = 0
+    for index, char in enumerate(luhn_digits):
+        value = int(char) * (2 if index % 2 == 0 else 1)
+        total += value // 10 + value % 10
+    return total % 10 == 0
+
+
 def _danish_cpr_candidate_years(
     year_suffix: int, century_digit: int
 ) -> tuple[int, ...]:
@@ -910,6 +966,68 @@ def validate_danish_cpr(text: str) -> bool:
         except (ValueError, calendar.IllegalMonthError):
             continue
     return False
+
+
+def _norwegian_birth_year(year_suffix: int, individual: int) -> int | None:
+    """Resolve the birth century encoded by a Norwegian individual number."""
+    if 0 <= individual <= 499:
+        return 1900 + year_suffix
+    if 500 <= individual <= 749 and 54 <= year_suffix <= 99:
+        return 1800 + year_suffix
+    if 500 <= individual <= 999 and 0 <= year_suffix <= 39:
+        return 2000 + year_suffix
+    if 900 <= individual <= 999 and 40 <= year_suffix <= 99:
+        return 1900 + year_suffix
+    return None
+
+
+def validate_norwegian_fodselsnummer(text: str) -> bool:
+    """Validate a Norwegian fødselsnummer with both modulus-11 controls.
+
+    A fødselsnummer has eleven digits: ``DDMMYYIIIKK``. The first six encode
+    the birth date, the next three encode an individual/century number, and
+    the last two are independently weighted control digits.
+    """
+    if not isinstance(text, str):
+        return False
+
+    digits = text.strip()
+    if re.fullmatch(r"[0-9]{11}", digits) is None:
+        return False
+
+    numbers = [int(char) for char in digits]
+    day = int(digits[0:2])
+    month = int(digits[2:4])
+    year_suffix = int(digits[4:6])
+    individual = int(digits[6:9])
+    year = _norwegian_birth_year(year_suffix, individual)
+    if year is None:
+        return False
+    try:
+        date(year, month, day)
+    except ValueError:
+        return False
+
+    first_weights = (3, 7, 6, 1, 8, 9, 4, 5, 2)
+    first_control = (
+        11
+        - sum(weight * number for weight, number in zip(first_weights, numbers[:9]))
+        % 11
+    )
+    if first_control == 11:
+        first_control = 0
+    if first_control == 10 or numbers[9] != first_control:
+        return False
+
+    second_weights = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
+    second_control = (
+        11
+        - sum(weight * number for weight, number in zip(second_weights, numbers[:10]))
+        % 11
+    )
+    if second_control == 11:
+        second_control = 0
+    return second_control != 10 and numbers[10] == second_control
 
 
 def validate_polish_pesel(text: str) -> bool:
@@ -1799,6 +1917,48 @@ LANGUAGE_MONTH_NAMES: Dict[str, List[str]] = {
         "10\uc6d4",
         "11\uc6d4",
         "12\uc6d4",
+    ],
+    "sv": [
+        "januari",
+        "februari",
+        "mars",
+        "april",
+        "maj",
+        "juni",
+        "juli",
+        "augusti",
+        "september",
+        "oktober",
+        "november",
+        "december",
+    ],
+    "da": [
+        "januar",
+        "februar",
+        "marts",
+        "april",
+        "maj",
+        "juni",
+        "juli",
+        "august",
+        "september",
+        "oktober",
+        "november",
+        "december",
+    ],
+    "no": [
+        "januar",
+        "februar",
+        "mars",
+        "april",
+        "mai",
+        "juni",
+        "juli",
+        "august",
+        "september",
+        "oktober",
+        "november",
+        "desember",
     ],
     "ro": [
         "ianuarie",
@@ -4447,12 +4607,102 @@ _TAGALOG_PII_PATTERNS: List[PIIPattern] = [
 ]
 
 
+_SWEDISH_MONTH_PATTERN = (
+    r"januari|februari|mars|april|maj|juni|juli|augusti|september|"
+    r"oktober|november|december"
+)
+
+_SWEDISH_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        r"\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b",
+        "date",
+        priority=9,
+        base_score=0.65,
+        context_words=["datum", "född", "fodd", "inlagd", "utskriven"],
+        context_boost=0.3,
+    ),
+    PIIPattern(
+        rf"\b[0-9]{{1,2}}\.?\s+(?:{_SWEDISH_MONTH_PATTERN})\s+[0-9]{{4}}\b",
+        "date",
+        priority=8,
+        base_score=0.7,
+        context_words=["datum", "född", "fodd", "inlagd", "utskriven"],
+        context_boost=0.25,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"(?<!\w)(?:\+46[\s.-]?|0)[1-9](?:[\s.-]?[0-9]){7,8}(?![0-9])",
+        "phone_number",
+        priority=8,
+        base_score=0.55,
+        context_words=["telefon", "tel", "mobil", "kontakt", "ring"],
+        context_boost=0.35,
+    ),
+    PIIPattern(
+        r"(?<![0-9])(?:[0-9]{8}|[0-9]{6})[-+]?[0-9]{4}(?![0-9])",
+        "national_id",
+        priority=10,
+        base_score=0.45,
+        context_words=[
+            "personnummer",
+            "person nr",
+            "person-id",
+            "identitetsnummer",
+        ],
+        context_boost=0.45,
+        safety_sweep_requires_context=True,
+        validator=validate_swedish_personnummer,
+    ),
+    PIIPattern(
+        (
+            r"\b(?!(?:adress|bostad)\b)[A-ZÅÄÖ]"
+            r"[A-Za-zÅÄÖåäö .'-]{2,60}"
+            r"(?:gata(?:n)?|väg(?:en)?|gränd|all[eé]|torg)\s+"
+            r"[0-9]{1,5}[A-Za-z]?\b"
+        ),
+        "street_address",
+        priority=7,
+        base_score=0.65,
+        context_words=["adress", "bostad", "gata", "väg"],
+        context_boost=0.25,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"(?<![0-9])(?:SE[-\s]?)?[0-9]{3}\s?[0-9]{2}(?![0-9])",
+        "postcode",
+        priority=6,
+        base_score=0.25,
+        context_words=["postnummer", "postnr", "postkod", "adress"],
+        context_boost=0.5,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE,
+    ),
+]
+
+
 _DANISH_MONTH_PATTERN = (
     r"januar|februar|marts|april|maj|juni|juli|august|september|"
     r"oktober|november|december"
 )
 
 _DANISH_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        r"\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b",
+        "date",
+        priority=9,
+        base_score=0.65,
+        context_words=[
+            "dato",
+            "født",
+            "foedt",
+            "fodt",
+            "fødselsdato",
+            "foedselsdato",
+            "indlagt",
+            "udskrevet",
+        ],
+        context_boost=0.3,
+    ),
     PIIPattern(
         r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b",
         "date",
@@ -4489,7 +4739,7 @@ _DANISH_PII_PATTERNS: List[PIIPattern] = [
         flags=re.IGNORECASE,
     ),
     PIIPattern(
-        r"(?<!\w)(?:\+45[\s.-]?)?(?:\d{2}[\s.-]?){3}\d{2}\b",
+        r"(?<!\w)(?:\+45[\s.-]?)?[2-9](?:[\s.-]?[0-9]){7}\b",
         "phone_number",
         priority=8,
         base_score=0.55,
@@ -4536,6 +4786,80 @@ _DANISH_PII_PATTERNS: List[PIIPattern] = [
     ),
     PIIPattern(
         r"(?<!\d)(?:DK[-\s]?)?\d{4}(?!\d)",
+        "postcode",
+        priority=6,
+        base_score=0.25,
+        context_words=["postnummer", "postnr", "postkode", "adresse"],
+        context_boost=0.5,
+        safety_sweep_requires_context=True,
+        flags=re.IGNORECASE,
+    ),
+]
+
+
+_NORWEGIAN_MONTH_PATTERN = (
+    r"januar|februar|mars|april|mai|juni|juli|august|september|"
+    r"oktober|november|desember"
+)
+
+_NORWEGIAN_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        r"\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b",
+        "date",
+        priority=9,
+        base_score=0.65,
+        context_words=["dato", "født", "fodt", "innlagt", "utskrevet"],
+        context_boost=0.3,
+    ),
+    PIIPattern(
+        rf"\b[0-9]{{1,2}}\.?\s+(?:{_NORWEGIAN_MONTH_PATTERN})\s+[0-9]{{4}}\b",
+        "date",
+        priority=8,
+        base_score=0.7,
+        context_words=["dato", "født", "fodt", "innlagt", "utskrevet"],
+        context_boost=0.25,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"(?<!\w)(?:\+47[\s.-]?)?[2-9](?:[\s.-]?[0-9]){7}\b",
+        "phone_number",
+        priority=8,
+        base_score=0.55,
+        context_words=["telefon", "tlf", "mobil", "kontakt", "ring"],
+        context_boost=0.35,
+    ),
+    PIIPattern(
+        r"(?<![0-9])[0-9]{11}(?![0-9])",
+        "national_id",
+        priority=10,
+        base_score=0.45,
+        context_words=[
+            "fødselsnummer",
+            "fodselsnummer",
+            "personnummer",
+            "person nr",
+            "person-id",
+        ],
+        context_boost=0.45,
+        safety_sweep_requires_context=True,
+        validator=validate_norwegian_fodselsnummer,
+    ),
+    PIIPattern(
+        (
+            r"\b(?!(?:adresse|bosted)\b)[A-ZÆØÅ]"
+            r"[A-Za-zÆØÅæøå .'-]{2,60}"
+            r"(?:gate|gata|vei(?:en)?|veg(?:en)?|all[eé]|plass|torg)\s+"
+            r"[0-9]{1,5}[A-Za-z]?\b"
+        ),
+        "street_address",
+        priority=7,
+        base_score=0.65,
+        context_words=["adresse", "bosted", "gate", "gata", "vei"],
+        context_boost=0.25,
+        flags=re.IGNORECASE,
+    ),
+    PIIPattern(
+        r"(?<![0-9])(?:NO[-\s]?)?[0-9]{4}(?![0-9])",
         "postcode",
         priority=6,
         base_score=0.25,
@@ -5118,7 +5442,9 @@ LANGUAGE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "sk": _SLOVAK_PII_PATTERNS,
     "ms": _MALAY_PII_PATTERNS,
     "tl": _TAGALOG_PII_PATTERNS,
+    "sv": _SWEDISH_PII_PATTERNS,
     "da": _DANISH_PII_PATTERNS,
+    "no": _NORWEGIAN_PII_PATTERNS,
     "ro": _ROMANIAN_PII_PATTERNS,
     "fi": _FINNISH_PII_PATTERNS,
     "bg": _BULGARIAN_PII_PATTERNS,
@@ -5509,6 +5835,21 @@ LANGUAGE_FAKE_DATA: Dict[str, Dict[str, List[str]]] = {
         "LOCATION": ["Manila", "Quezon City", "Cebu City"],
         "ZIPCODE": ["1000", "1100", "6000"],
     },
+    "sv": {
+        "NAME": ["Anna Andersson", "Erik Johansson", "Sara Lindberg", "Lars Nilsson"],
+        "FIRST_NAME": ["Anna", "Erik", "Sara", "Lars"],
+        "LAST_NAME": ["Andersson", "Johansson", "Lindberg", "Nilsson"],
+        "EMAIL": ["patient@example.se", "kontakt@example.org"],
+        "PHONE": ["+46 70 123 45 67", "08-123 456 78"],
+        "ID_NUM": ["510312-1140", "19510312-1140"],
+        "STREET_ADDRESS": ["Södra Förstadsgatan 12", "Åsögatan 45"],
+        "URL_PERSONAL": ["https://example.se"],
+        "USERNAME": ["patient123", "anvandare456"],
+        "DATE": ["1985-08-17", "17 augusti 1985"],
+        "AGE": ["45", "62", "38"],
+        "LOCATION": ["Stockholm", "Göteborg", "Malmö"],
+        "ZIPCODE": ["111 22", "412 53", "211 34"],
+    },
     "da": {
         "NAME": ["Anna Nielsen", "Peter Jensen", "Mette Hansen", "Lars Andersen"],
         "FIRST_NAME": ["Anna", "Peter", "Mette", "Lars"],
@@ -5516,13 +5857,28 @@ LANGUAGE_FAKE_DATA: Dict[str, Dict[str, List[str]]] = {
         "EMAIL": ["patient@example.dk", "kontakt@example.org"],
         "PHONE": ["+45 20 12 34 56", "30 45 67 89"],
         "ID_NUM": ["170885-1234", "010101-4001"],
-        "STREET_ADDRESS": ["Bredgade 12", "Roskildevej 45"],
+        "STREET_ADDRESS": ["Nørrebrogade 12", "Roskildevej 45"],
         "URL_PERSONAL": ["https://example.dk"],
         "USERNAME": ["patient123", "bruger456"],
-        "DATE": ["17/08/1985", "17 august 1985"],
+        "DATE": ["1985-08-17", "17 august 1985"],
         "AGE": ["45", "62", "38"],
-        "LOCATION": ["Kobenhavn", "Aarhus", "Odense"],
+        "LOCATION": ["København", "Aarhus", "Odense"],
         "ZIPCODE": ["1260", "8000", "5000"],
+    },
+    "no": {
+        "NAME": ["Ingrid Hansen", "Ole Johansen", "Kari Nilsen", "Lars Berg"],
+        "FIRST_NAME": ["Ingrid", "Ole", "Kari", "Lars"],
+        "LAST_NAME": ["Hansen", "Johansen", "Nilsen", "Berg"],
+        "EMAIL": ["pasient@example.no", "kontakt@example.org"],
+        "PHONE": ["+47 912 34 567", "22 12 34 56"],
+        "ID_NUM": ["12035101460", "03088608002"],
+        "STREET_ADDRESS": ["Dronning Eufemias gate 16", "Storgata 15"],
+        "URL_PERSONAL": ["https://example.no"],
+        "USERNAME": ["pasient123", "bruker456"],
+        "DATE": ["1985-08-17", "17 august 1985"],
+        "AGE": ["45", "62", "38"],
+        "LOCATION": ["Oslo", "Bergen", "Trondheim"],
+        "ZIPCODE": ["0154", "5003", "7010"],
     },
     "vi": {
         "NAME": [

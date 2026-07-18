@@ -58,6 +58,9 @@ PIILanguage = Literal[
     "th",
     "ko",
     "ro",
+    "sv",
+    "da",
+    "no",
 ]
 
 

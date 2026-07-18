@@ -87,6 +87,9 @@ const (
 	LangTH PIILanguage = "th"
 	LangKO PIILanguage = "ko"
 	LangRO PIILanguage = "ro"
+	LangSV PIILanguage = "sv"
+	LangDA PIILanguage = "da"
+	LangNO PIILanguage = "no"
 )
 
 // DeidentificationMethod selects how detected PII spans are transformed by the

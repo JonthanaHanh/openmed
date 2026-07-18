@@ -18,6 +18,7 @@ from openmed.core.anonymizer.providers import clinical_ids
 from openmed.core.pii_i18n import (
     SUPPORTED_LANGUAGES,
     validate_aadhaar,
+    validate_danish_cpr,
     validate_dutch_bsn,
     validate_french_nir,
     validate_german_steuer_id,
@@ -25,9 +26,11 @@ from openmed.core.pii_i18n import (
     validate_israeli_teudat_zehut,
     validate_italian_codice_fiscale,
     validate_korean_rrn,
+    validate_norwegian_fodselsnummer,
     validate_portuguese_cpf,
     validate_romanian_cnp,
     validate_spanish_nie,
+    validate_swedish_personnummer,
     validate_thai_national_id,
     validate_turkish_tckn,
 )
@@ -50,6 +53,9 @@ SUPPORTED_LOCALE_PHI_LANGUAGES: Final[tuple[str, ...]] = (
     "th",
     "ko",
     "ro",
+    "sv",
+    "da",
+    "no",
 )
 
 LOCALE_PHI_LABELS: Final[tuple[str, ...]] = (
@@ -236,6 +242,33 @@ _TEMPLATES: Final[Mapping[str, tuple[str, ...]]] = {
         ". Control la ",
         ".",
     ),
+    "sv": (
+        "Klinisk anteckning: patient ",
+        " född ",
+        ". Patient-ID ",
+        ". Telefon ",
+        ". Adress ",
+        ". Uppföljning ",
+        ".",
+    ),
+    "da": (
+        "Klinisk notat: patient ",
+        " født ",
+        ". Patient-ID ",
+        ". Telefon ",
+        ". Adresse ",
+        ". Opfølgning ",
+        ".",
+    ),
+    "no": (
+        "Klinisk notat: pasient ",
+        " født ",
+        ". Pasient-ID ",
+        ". Telefon ",
+        ". Adresse ",
+        ". Oppfølging ",
+        ".",
+    ),
 }
 
 _NATIONAL_ID_VALIDATORS: Final[Mapping[str, Callable[[str], bool]]] = {
@@ -254,6 +287,9 @@ _NATIONAL_ID_VALIDATORS: Final[Mapping[str, Callable[[str], bool]]] = {
     "th": validate_thai_national_id,
     "ko": validate_korean_rrn,
     "ro": validate_romanian_cnp,
+    "sv": validate_swedish_personnummer,
+    "da": validate_danish_cpr,
+    "no": validate_norwegian_fodselsnummer,
 }
 
 _NATIONAL_ID_VALIDATOR_NAMES: Final[Mapping[str, str]] = {
@@ -272,6 +308,9 @@ _NATIONAL_ID_VALIDATOR_NAMES: Final[Mapping[str, str]] = {
     "th": "pii_i18n.validate_thai_national_id",
     "ko": "pii_i18n.validate_korean_rrn",
     "ro": "pii_i18n.validate_romanian_cnp",
+    "sv": "pii_i18n.validate_swedish_personnummer",
+    "da": "pii_i18n.validate_danish_cpr",
+    "no": "pii_i18n.validate_norwegian_fodselsnummer",
 }
 
 

@@ -8,6 +8,7 @@ from openmed.core.labels import CANONICAL_LABELS, ID_NUM
 from openmed.core.pii_i18n import (
     SUPPORTED_LANGUAGES,
     validate_aadhaar,
+    validate_danish_cpr,
     validate_dutch_bsn,
     validate_french_nir,
     validate_german_steuer_id,
@@ -15,9 +16,11 @@ from openmed.core.pii_i18n import (
     validate_israeli_teudat_zehut,
     validate_italian_codice_fiscale,
     validate_korean_rrn,
+    validate_norwegian_fodselsnummer,
     validate_portuguese_cpf,
     validate_romanian_cnp,
     validate_spanish_nie,
+    validate_swedish_personnummer,
     validate_thai_national_id,
     validate_turkish_tckn,
 )
@@ -44,6 +47,9 @@ _ID_VALIDATORS = {
     "th": validate_thai_national_id,
     "ko": validate_korean_rrn,
     "ro": validate_romanian_cnp,
+    "sv": validate_swedish_personnummer,
+    "da": validate_danish_cpr,
+    "no": validate_norwegian_fodselsnummer,
 }
 
 _SCRIPT_RANGES = {
