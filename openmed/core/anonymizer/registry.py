@@ -231,6 +231,36 @@ def _uscc_surrogate(faker, original):
     return generate_unified_social_credit_code(rng=faker.random)
 
 
+def _indian_id_surrogate(faker, original):
+    """Return the matching Indian identifier surrogate, if recognized."""
+
+    if not original:
+        return None
+    from openmed.core.pii_i18n import (
+        validate_abha,
+        validate_gstin,
+        validate_ifsc,
+        validate_indian_driving_licence,
+        validate_indian_passport,
+        validate_pan,
+        validate_voter_id_epic,
+    )
+
+    validators_and_methods = (
+        (validate_gstin, "gstin"),
+        (validate_pan, "pan"),
+        (validate_ifsc, "ifsc"),
+        (validate_indian_driving_licence, "indian_driving_licence"),
+        (validate_indian_passport, "indian_passport"),
+        (validate_voter_id_epic, "voter_id_epic"),
+        (validate_abha, "abha"),
+    )
+    for validator, method in validators_and_methods:
+        if validator(original) and hasattr(faker, method):
+            return getattr(faker, method)()
+    return None
+
+
 def _gen_id_num(faker, original, *, locale):
     mrz = _mrz_surrogate(faker, original)
     if mrz is not None:
@@ -238,6 +268,9 @@ def _gen_id_num(faker, original, *, locale):
     uscc = _uscc_surrogate(faker, original)
     if uscc is not None:
         return uscc
+    indian_id = _indian_id_surrogate(faker, original)
+    if indian_id is not None:
+        return indian_id
     method = _LOCALE_ID_METHODS.get(locale)
     if method and hasattr(faker, method):
         return getattr(faker, method)()
@@ -415,6 +448,12 @@ def _gen_vin(faker, original, *, locale):
 
 
 def _gen_vehicle_registration(faker, original, *, locale):
+    from openmed.core.pii_i18n import validate_vehicle_registration
+
+    if validate_vehicle_registration(original) and hasattr(
+        faker, "indian_vehicle_registration"
+    ):
+        return faker.indian_vehicle_registration()
     return (
         faker.license_plate()
         if hasattr(faker, "license_plate")

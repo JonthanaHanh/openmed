@@ -36,6 +36,13 @@ from openmed.eval.datasets.multilingual_ner import (
 )
 from openmed.eval.golden import load_benchmark_fixtures
 from openmed.eval.harness import BenchmarkFixture
+from openmed.eval.suites.indian_ids import (
+    INDIAN_MULTI_ID,
+    evaluate_indian_id_recognizer,
+    indian_id_suite_metadata,
+    load_indian_id_fixtures,
+    run_indian_id_evaluation,
+)
 from openmed.eval.suites.multimodal_dicom import (
     MULTIMODAL_DICOM,
     generate_synthetic_dicom_corpus,
@@ -76,6 +83,7 @@ DEFAULT_SUITES: tuple[str, ...] = (
     BIOMEDICAL_NER,
     MULTILINGUAL_NER,
     MULTIMODAL_DICOM,
+    INDIAN_MULTI_ID,
 )
 
 
@@ -112,6 +120,8 @@ def load_suite_fixtures(name: str, **kwargs: Any) -> list[Any]:
         return load_multilingual_ner_fixtures(paths=paths, **kwargs)
     if suite == MULTIMODAL_DICOM:
         return load_multimodal_dicom_fixtures(**kwargs)
+    if suite == INDIAN_MULTI_ID:
+        return load_indian_id_fixtures(kwargs.get("path"))
     raise ValueError(f"benchmark suite {suite!r} does not have a concrete loader yet")
 
 
@@ -135,6 +145,8 @@ def suite_metadata(name: str, **kwargs: Any) -> dict[str, Any]:
         return multilingual_ner_suite_metadata(**kwargs)
     if suite == MULTIMODAL_DICOM:
         return multimodal_dicom_metadata(**kwargs)
+    if suite == INDIAN_MULTI_ID:
+        return indian_id_suite_metadata(**kwargs)
     return {"suite": suite}
 
 
@@ -148,6 +160,7 @@ __all__ = [
     "BIOMEDICAL_NER",
     "MULTILINGUAL_NER",
     "MULTIMODAL_DICOM",
+    "INDIAN_MULTI_ID",
     "RELATIONS",
     "RelationFixture",
     "RelationTrap",
@@ -182,4 +195,8 @@ __all__ = [
     "multimodal_dicom_metadata",
     "run_multimodal_dicom",
     "generate_synthetic_dicom_corpus",
+    "evaluate_indian_id_recognizer",
+    "indian_id_suite_metadata",
+    "load_indian_id_fixtures",
+    "run_indian_id_evaluation",
 ]

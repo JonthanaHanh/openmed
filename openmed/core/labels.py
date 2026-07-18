@@ -166,6 +166,20 @@ ID_SUBTYPE_SSN_ADJACENT: Final = "ssn_adjacent"
 ID_SUBTYPE_PASSPORT_MRZ: Final = "passport_mrz"
 #: China Unified Social Credit Code (organization-linked); normalizes to ID_NUM.
 ID_SUBTYPE_SOCIAL_CREDIT_CODE: Final = "social_credit_code"
+#: Indian Permanent Account Number (PAN); normalizes to ID_NUM.
+ID_SUBTYPE_PAN: Final = "pan"
+#: Indian GST registration number; normalizes to ID_NUM.
+ID_SUBTYPE_GSTIN: Final = "gstin"
+#: Indian Financial System Code; normalizes to ID_NUM.
+ID_SUBTYPE_IFSC: Final = "ifsc"
+#: Indian Electoral Photo Identity Card number; normalizes to ID_NUM.
+ID_SUBTYPE_VOTER_ID_EPIC: Final = "voter_id_epic"
+#: Indian driving-licence number; normalizes to ID_NUM.
+ID_SUBTYPE_INDIAN_DRIVING_LICENCE: Final = "indian_driving_licence"
+#: Indian passport number outside an MRZ block; normalizes to ID_NUM.
+ID_SUBTYPE_INDIAN_PASSPORT: Final = "indian_passport"
+#: Ayushman Bharat Health Account number; normalizes to ID_NUM.
+ID_SUBTYPE_ABHA: Final = "abha"
 ID_SUBTYPES: Final[FrozenSet[str]] = frozenset(
     {
         ID_SUBTYPE_MRN,
@@ -174,6 +188,13 @@ ID_SUBTYPES: Final[FrozenSet[str]] = frozenset(
         ID_SUBTYPE_SSN_ADJACENT,
         ID_SUBTYPE_PASSPORT_MRZ,
         ID_SUBTYPE_SOCIAL_CREDIT_CODE,
+        ID_SUBTYPE_PAN,
+        ID_SUBTYPE_GSTIN,
+        ID_SUBTYPE_IFSC,
+        ID_SUBTYPE_VOTER_ID_EPIC,
+        ID_SUBTYPE_INDIAN_DRIVING_LICENCE,
+        ID_SUBTYPE_INDIAN_PASSPORT,
+        ID_SUBTYPE_ABHA,
     }
 )
 
@@ -733,6 +754,24 @@ _ALIAS_MAP: Final[Mapping[str, str]] = {
     "aadhaar": ID_NUM,
     "teudatzehut": ID_NUM,
     "tz": ID_NUM,
+    "pan": ID_NUM,
+    "permanentaccountnumber": ID_NUM,
+    "gstin": ID_NUM,
+    "gstnumber": ID_NUM,
+    "ifsc": ID_NUM,
+    "ifsccode": ID_NUM,
+    "voteridepic": ID_NUM,
+    "voterid": ID_NUM,
+    "epic": ID_NUM,
+    "indiandrivinglicence": ID_NUM,
+    "drivinglicence": ID_NUM,
+    "indiandrivinglicense": ID_NUM,
+    "drivinglicense": ID_NUM,
+    "indianpassport": ID_NUM,
+    "passport": ID_NUM,
+    "abha": ID_NUM,
+    "abhanumber": ID_NUM,
+    "healthid": ID_NUM,
     "npi": ID_NUM,
     "ssn": SSN,
     "socialsecuritynumber": SSN,
@@ -782,6 +821,8 @@ _ALIAS_MAP: Final[Mapping[str, str]] = {
     "vin": VIN,
     "vrm": VEHICLE_REGISTRATION,
     "licenseplate": VEHICLE_REGISTRATION,
+    "indianvehicleregistration": VEHICLE_REGISTRATION,
+    "rtoregistration": VEHICLE_REGISTRATION,
     "imei": IMEI,
     # Microbiology
     "microorganism": MICROORGANISM,
@@ -961,6 +1002,24 @@ ID_ALIAS_SUBTYPES: Final[Mapping[str, str]] = {
     "aadhaar": ID_SUBTYPE_NATIONAL_ID,
     "teudatzehut": ID_SUBTYPE_NATIONAL_ID,
     "tz": ID_SUBTYPE_NATIONAL_ID,
+    "pan": ID_SUBTYPE_PAN,
+    "permanentaccountnumber": ID_SUBTYPE_PAN,
+    "gstin": ID_SUBTYPE_GSTIN,
+    "gstnumber": ID_SUBTYPE_GSTIN,
+    "ifsc": ID_SUBTYPE_IFSC,
+    "ifsccode": ID_SUBTYPE_IFSC,
+    "voteridepic": ID_SUBTYPE_VOTER_ID_EPIC,
+    "voterid": ID_SUBTYPE_VOTER_ID_EPIC,
+    "epic": ID_SUBTYPE_VOTER_ID_EPIC,
+    "indiandrivinglicence": ID_SUBTYPE_INDIAN_DRIVING_LICENCE,
+    "drivinglicence": ID_SUBTYPE_INDIAN_DRIVING_LICENCE,
+    "indiandrivinglicense": ID_SUBTYPE_INDIAN_DRIVING_LICENCE,
+    "drivinglicense": ID_SUBTYPE_INDIAN_DRIVING_LICENCE,
+    "indianpassport": ID_SUBTYPE_INDIAN_PASSPORT,
+    "passport": ID_SUBTYPE_INDIAN_PASSPORT,
+    "abha": ID_SUBTYPE_ABHA,
+    "abhanumber": ID_SUBTYPE_ABHA,
+    "healthid": ID_SUBTYPE_ABHA,
 }
 
 _BIOES_PREFIX_RE: Final = re.compile(r"^[BIES]-")
@@ -1072,6 +1131,13 @@ __all__ = [
     "ID_SUBTYPE_SSN_ADJACENT",
     "ID_SUBTYPE_PASSPORT_MRZ",
     "ID_SUBTYPE_SOCIAL_CREDIT_CODE",
+    "ID_SUBTYPE_PAN",
+    "ID_SUBTYPE_GSTIN",
+    "ID_SUBTYPE_IFSC",
+    "ID_SUBTYPE_VOTER_ID_EPIC",
+    "ID_SUBTYPE_INDIAN_DRIVING_LICENCE",
+    "ID_SUBTYPE_INDIAN_PASSPORT",
+    "ID_SUBTYPE_ABHA",
     "LABEL_METADATA",
     "LABEL_TO_HIPAA",
     "POLICY_LABELS",

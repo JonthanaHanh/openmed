@@ -19,6 +19,8 @@ deterministic:
   - German Steuer-ID (Faker's ``de_DE.ssn`` is US-format)
   - Aadhaar with Verhoeff checksum (Faker's ``en_IN.aadhaar_id`` rarely
     passes the official Verhoeff check — only ~1 in 20 by sampling)
+  - Indian PAN, GSTIN, IFSC, EPIC, driving-licence, passport, vehicle
+    registration, and ABHA identifiers
   - Spanish NIE (Faker's built-in uses non-instance randomness)
   - Spanish DNI (Faker's ``es_ES`` provider exposes NIE but not DNI)
   - Israeli Teudat Zehut (Faker has no built-in)
@@ -570,6 +572,144 @@ class AadhaarProvider(BaseProvider):
         digits.extend(self.generator.random.randint(0, 9) for _ in range(10))
         digits.append(_verhoeff_checksum(digits))
         return "".join(str(d) for d in digits)
+
+
+# ---------------------------------------------------------------------------
+# Indian multi-identifier pack
+# ---------------------------------------------------------------------------
+
+_UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+_ALPHANUMERIC = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+_PAN_HOLDER_TYPES = "ABCFGHJLPT"
+
+
+def generate_pan(*, rng: random.Random | None = None) -> str:
+    """Generate a structurally valid synthetic PAN with a check letter."""
+
+    from openmed.core.pii_i18n import pan_check_letter
+
+    source = rng or random.Random()
+    body = (
+        "OMD"
+        + source.choice(_PAN_HOLDER_TYPES)
+        + source.choice(_UPPERCASE)
+        + f"{source.randint(1, 9999):04d}"
+    )
+    return body + pan_check_letter(body)
+
+
+def generate_ifsc(*, rng: random.Random | None = None) -> str:
+    """Generate a synthetic 11-character IFSC-shaped bank-branch code."""
+
+    source = rng or random.Random()
+    bank = "".join(source.choice(_UPPERCASE) for _ in range(4))
+    branch = "".join(source.choice(_ALPHANUMERIC) for _ in range(6))
+    if branch == "000000":  # pragma: no cover - vanishingly rare guard
+        branch = "000001"
+    return f"{bank}0{branch}"
+
+
+def generate_gstin(*, rng: random.Random | None = None) -> str:
+    """Generate a state-, PAN-, and mod-36-valid synthetic GSTIN."""
+
+    from openmed.core.pii_i18n import gstin_check_char
+
+    source = rng or random.Random()
+    state = f"{source.randint(1, 37):02d}"
+    pan = generate_pan(rng=source)
+    entity = source.choice(_ALPHANUMERIC[1:])
+    body = f"{state}{pan}{entity}Z"
+    return body + gstin_check_char(body)
+
+
+def generate_indian_passport(*, rng: random.Random | None = None) -> str:
+    """Generate a synthetic Indian passport number."""
+
+    source = rng or random.Random()
+    return f"{source.choice(_UPPERCASE)}{source.randint(1_000_000, 9_999_999)}"
+
+
+def generate_voter_id_epic(*, rng: random.Random | None = None) -> str:
+    """Generate a synthetic three-letter, seven-digit EPIC number."""
+
+    source = rng or random.Random()
+    prefix = "".join(source.choice(_UPPERCASE) for _ in range(3))
+    return f"{prefix}{source.randint(1, 9_999_999):07d}"
+
+
+def generate_indian_driving_licence(*, rng: random.Random | None = None) -> str:
+    """Generate a synthetic normalized 15-character Indian driving licence."""
+
+    source = rng or random.Random()
+    state = "".join(source.choice(_UPPERCASE) for _ in range(2))
+    rto = source.randint(1, 99)
+    year = source.randint(1980, 2026)
+    serial = source.randint(1, 9_999_999)
+    return f"{state}{rto:02d}{year:04d}{serial:07d}"
+
+
+def generate_vehicle_registration(*, rng: random.Random | None = None) -> str:
+    """Generate a synthetic standard RTO vehicle registration number."""
+
+    source = rng or random.Random()
+    state = "".join(source.choice(_UPPERCASE) for _ in range(2))
+    rto = source.randint(1, 99)
+    series = "".join(source.choice(_UPPERCASE) for _ in range(source.randint(1, 3)))
+    serial = source.randint(1, 9999)
+    return f"{state}{rto:02d}{series}{serial:04d}"
+
+
+def generate_abha(*, rng: random.Random | None = None) -> str:
+    """Generate a synthetic 14-digit ABHA Number."""
+
+    source = rng or random.Random()
+    digits = [str(source.randint(1, 9))]
+    digits.extend(str(source.randint(0, 9)) for _ in range(13))
+    return "".join(digits)
+
+
+class IndianIdentifierProvider(BaseProvider):
+    """Faker provider for the synthetic Indian multi-identifier pack."""
+
+    def pan(self) -> str:
+        """Return a synthetic PAN accepted by the PAN validator."""
+
+        return generate_pan(rng=self.generator.random)
+
+    def ifsc(self) -> str:
+        """Return a synthetic IFSC-shaped bank-branch code."""
+
+        return generate_ifsc(rng=self.generator.random)
+
+    def gstin(self) -> str:
+        """Return a synthetic checksum-valid GSTIN."""
+
+        return generate_gstin(rng=self.generator.random)
+
+    def indian_passport(self) -> str:
+        """Return a synthetic Indian passport number."""
+
+        return generate_indian_passport(rng=self.generator.random)
+
+    def voter_id_epic(self) -> str:
+        """Return a synthetic EPIC number."""
+
+        return generate_voter_id_epic(rng=self.generator.random)
+
+    def indian_driving_licence(self) -> str:
+        """Return a synthetic Indian driving-licence number."""
+
+        return generate_indian_driving_licence(rng=self.generator.random)
+
+    def indian_vehicle_registration(self) -> str:
+        """Return a synthetic RTO vehicle registration number."""
+
+        return generate_vehicle_registration(rng=self.generator.random)
+
+    def abha(self) -> str:
+        """Return a synthetic 14-digit ABHA Number."""
+
+        return generate_abha(rng=self.generator.random)
 
 
 # ---------------------------------------------------------------------------
@@ -1927,6 +2067,7 @@ __all__ = [
     "FinancialIdentifierProvider",
     "GermanSteuerIdProvider",
     "HungarianTAJProvider",
+    "IndianIdentifierProvider",
     "IndonesianNIKProvider",
     "IsraeliTeudatZehutProvider",
     "KoreanRRNProvider",
@@ -1956,6 +2097,14 @@ __all__ = [
     "generate_canadian_sin",
     "generate_danish_cpr",
     "generate_hungarian_taj",
+    "generate_abha",
+    "generate_gstin",
+    "generate_ifsc",
+    "generate_indian_driving_licence",
+    "generate_indian_passport",
+    "generate_pan",
+    "generate_vehicle_registration",
+    "generate_voter_id_epic",
     "generate_estonian_isikukood",
     "generate_iban",
     "generate_ontario_health_card",
