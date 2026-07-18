@@ -10,7 +10,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from examples import clinical_ner_families, gradio_deid_app
+from examples import (
+    clinical_ner_families,
+    gradio_deid_app,
+    onboarding_india_dpdp,
+)
 
 
 def test_clinical_ner_families_example_is_syntactically_valid():
@@ -160,3 +164,69 @@ def test_gradio_deid_app_missing_gradio_prints_hint(monkeypatch):
         gradio_deid_app.build_demo()
 
     assert "pip install gradio" in str(excinfo.value)
+
+
+def test_onboarding_india_dpdp_example_is_syntactically_valid():
+    source = Path("examples/onboarding_india_dpdp.py").read_text(encoding="utf-8")
+
+    ast.parse(source)
+
+
+def test_onboarding_india_dpdp_recognizer_covers_synthetic_direct_identifiers():
+    from openmed.core.custom_recognizer import CustomRecognizer
+
+    recognizer = CustomRecognizer.from_config(
+        onboarding_india_dpdp.INDIA_CUSTOM_RECOGNIZER
+    )
+
+    assert [
+        (entity.text, entity.label)
+        for entity in recognizer.detect_entities(
+            onboarding_india_dpdp.SYNTHETIC_HINGLISH_NOTE
+        )
+    ] == [
+        (onboarding_india_dpdp.SYNTHETIC_PERSON, "PERSON"),
+        (onboarding_india_dpdp.SYNTHETIC_AADHAAR, "ID_NUM"),
+        (onboarding_india_dpdp.SYNTHETIC_ABHA, "ID_NUM"),
+    ]
+
+
+def test_onboarding_india_dpdp_runs_policy_pipeline_without_network(monkeypatch):
+    from openmed.core import pii
+    from openmed.processing.outputs import PredictionResult
+
+    calls = []
+
+    def fake_extract_pii(text, model_name, *args, **kwargs):
+        calls.append(
+            {
+                "text": text,
+                "model_name": model_name,
+                "lang": kwargs["lang"],
+            }
+        )
+        return PredictionResult(
+            text=text,
+            entities=[],
+            model_name=model_name,
+            timestamp="2026-01-01T00:00:00",
+        )
+
+    monkeypatch.setattr(pii, "extract_pii", fake_extract_pii)
+
+    result = onboarding_india_dpdp.run()
+
+    assert calls == [
+        {
+            "text": onboarding_india_dpdp.SYNTHETIC_HINGLISH_NOTE,
+            "model_name": onboarding_india_dpdp.HINDI_MODEL_ID,
+            "lang": "hi",
+        }
+    ]
+    onboarding_india_dpdp.assert_synthetic_pii_is_masked(result.deidentified_text)
+    protected_values = {entity.text for entity in result.pii_entities}
+    assert {
+        onboarding_india_dpdp.SYNTHETIC_AADHAAR,
+        onboarding_india_dpdp.SYNTHETIC_ABHA,
+    }.issubset(protected_values)
+    assert "[PERSON]" in result.deidentified_text

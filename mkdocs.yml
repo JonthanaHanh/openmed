@@ -18,6 +18,8 @@ nav:
       - v1.6-v1.7 Feature Coverage: release/v1.6-v1.7-feature-coverage.md
       - Quick Start: getting-started.md
       - Persona Quickstarts: quickstarts.md
+      - India Onboarding: onboarding-india.md
+      - भारत के उपयोगकर्ताओं के लिए गाइड: onboarding-india.hi.md
   - Core Guides:
       - Analyze Text Helper: analyze-text.md
       - REST Service (MVP): rest-service.md
