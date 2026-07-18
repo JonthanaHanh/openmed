@@ -244,6 +244,19 @@ def _gen_id_num(faker, original, *, locale):
     return preserve_id_pattern(original, rng=faker.random)
 
 
+def _gen_facility_id(faker, original, *, locale):
+    from openmed.core.pii_i18n import (
+        validate_kenya_mfl_code,
+        validate_nigeria_hfr_code,
+    )
+
+    if validate_kenya_mfl_code(original):
+        return faker.kmhfl_code(original)
+    if validate_nigeria_hfr_code(original):
+        return faker.hfr_facility_code(original)
+    return preserve_id_pattern(original, rng=faker.random)
+
+
 def _gen_ssn(faker, original, *, locale):
     method = _LOCALE_ID_METHODS.get(locale, "ssn")
     if hasattr(faker, method):
@@ -482,6 +495,7 @@ LABEL_GENERATORS: Dict[str, Generator] = {
     L.TIME: _gen_time,
     L.AGE: _gen_age,
     L.ID_NUM: _gen_id_num,
+    "FACILITY_ID": _gen_facility_id,
     L.SSN: _gen_ssn,
     L.ACCOUNT_NUMBER: _gen_account_number,
     L.PASSWORD: _gen_password,

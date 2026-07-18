@@ -158,6 +158,60 @@ def validate_bic(text: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Health Facility Identifier Validators
+# ---------------------------------------------------------------------------
+
+
+def validate_kenya_mfl_code(text: str) -> bool:
+    """Validate a Kenya Master Health Facility List code's shape.
+
+    KMHFL codes are unformatted five- or six-digit numeric identifiers. The
+    detector separately requires explicit facility context because numbers of
+    this length are common in clinical notes and claims.
+
+    Args:
+        text: Candidate MFL code.
+
+    Returns:
+        True when ``text`` is exactly five or six ASCII digits.
+    """
+
+    return isinstance(text, str) and re.fullmatch(r"[0-9]{5,6}", text) is not None
+
+
+def validate_nigeria_hfr_code(text: str) -> bool:
+    """Validate a Nigeria Health Facility Registry identifier.
+
+    The ten-digit ``AABBCDEEEE`` structure contains a state code (01-37),
+    LGA code (01-44), ownership (1 public or 2 private), level of care
+    (1 primary, 2 secondary, or 3 tertiary), and a non-zero four-digit
+    LGA-level serial number.
+
+    Args:
+        text: Candidate HFR facility code.
+
+    Returns:
+        True when every field is within its published structural range.
+    """
+
+    if not isinstance(text, str) or re.fullmatch(r"[0-9]{10}", text) is None:
+        return False
+
+    state = int(text[:2])
+    lga = int(text[2:4])
+    ownership = int(text[4])
+    level_of_care = int(text[5])
+    serial = int(text[6:])
+    return (
+        1 <= state <= 37
+        and 1 <= lga <= 44
+        and ownership in {1, 2}
+        and level_of_care in {1, 2, 3}
+        and 1 <= serial <= 9999
+    )
+
+
+# ---------------------------------------------------------------------------
 # National ID Validators
 # ---------------------------------------------------------------------------
 
@@ -2063,6 +2117,78 @@ _CANADIAN_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
         context_boost=0.45,
         validator=validate_canadian_sin,
     ),
+]
+
+
+def _context_prefixed_numeric_pattern(
+    context_words: tuple[str, ...],
+    digit_pattern: str,
+) -> str:
+    prefixes = (
+        rf"(?<={re.escape(context)}{re.escape(separator)})"
+        for context in context_words
+        for separator in (" ", ": ", " #")
+    )
+    return "(?:" + "|".join(prefixes) + ")" + digit_pattern
+
+
+_KENYA_HEALTH_FACILITY_CONTEXT = (
+    "mfl",
+    "mfl code",
+    "kmhfl",
+    "kmhfl code",
+    "kmhfr",
+    "kmhfr code",
+    "facility code",
+    "facility id",
+    "health facility code",
+    "msimbo wa kituo",
+    "nambari ya kituo",
+)
+
+_NIGERIA_HEALTH_FACILITY_CONTEXT = (
+    "hfr",
+    "hfr code",
+    "nhfr",
+    "nhfr code",
+    "facility code",
+    "facility id",
+    "health facility code",
+    "health facility registry code",
+)
+
+
+_KENYA_HEALTH_FACILITY_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        _context_prefixed_numeric_pattern(
+            _KENYA_HEALTH_FACILITY_CONTEXT,
+            r"[0-9]{5,6}(?![0-9])",
+        ),
+        "FACILITY_ID",
+        priority=12,
+        base_score=0.25,
+        context_words=list(_KENYA_HEALTH_FACILITY_CONTEXT),
+        context_boost=0.65,
+        validator=validate_kenya_mfl_code,
+        safety_sweep_requires_context=True,
+    )
+]
+
+
+_NIGERIA_HEALTH_FACILITY_PII_PATTERNS: List[PIIPattern] = [
+    PIIPattern(
+        _context_prefixed_numeric_pattern(
+            _NIGERIA_HEALTH_FACILITY_CONTEXT,
+            r"[0-9]{10}(?![0-9])",
+        ),
+        "FACILITY_ID",
+        priority=12,
+        base_score=0.25,
+        context_words=list(_NIGERIA_HEALTH_FACILITY_CONTEXT),
+        context_boost=0.65,
+        validator=validate_nigeria_hfr_code,
+        safety_sweep_requires_context=True,
+    )
 ]
 
 
@@ -5136,6 +5262,9 @@ LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
     "fr_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
+    "sw": _KENYA_HEALTH_FACILITY_PII_PATTERNS,
+    "en_ke": _KENYA_HEALTH_FACILITY_PII_PATTERNS,
+    "en_ng": _NIGERIA_HEALTH_FACILITY_PII_PATTERNS,
 }
 
 
@@ -5801,8 +5930,9 @@ def _locale_pattern_keys(lang: str, locale: str | None) -> list[str]:
     keys: list[str] = []
     if locale:
         keys.append(_normalize_pattern_locale(locale))
-    if "_" in lang or "-" in lang:
-        keys.append(_normalize_pattern_locale(lang))
+    normalized_lang = _normalize_pattern_locale(lang)
+    if "_" in lang or "-" in lang or normalized_lang in LOCALE_PII_PATTERNS:
+        keys.append(normalized_lang)
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -5836,7 +5966,10 @@ def get_patterns_for_language(lang: str, locale: str | None = None) -> List[PIIP
     Raises:
         ValueError: If the language is not supported
     """
-    supported_pattern_languages = SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES
+    locale_pattern_languages = {key.split("_", 1)[0] for key in LOCALE_PII_PATTERNS}
+    supported_pattern_languages = (
+        SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES | locale_pattern_languages
+    )
     base_lang = _normalize_pattern_language(lang)
     if base_lang not in supported_pattern_languages:
         raise ValueError(

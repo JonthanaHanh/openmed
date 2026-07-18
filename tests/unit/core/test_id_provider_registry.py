@@ -47,6 +47,8 @@ EXPECTED_VALIDATOR_KEYS = (
     ("vi", "cccd"),
     ("vi", "cmnd"),
     ("us", "npi"),
+    ("ke", "kmhfl_code"),
+    ("ng", "hfr_facility_code"),
 )
 
 
@@ -135,6 +137,32 @@ class TestNationalIdRegistry:
 
     def test_unknown_lookup_returns_none(self):
         assert get_national_id("zz", "unknown") is None
+
+    @pytest.mark.parametrize("alias", ("ke", "sw", "en_KE"))
+    def test_kenya_facility_registry_aliases_generate_valid_surrogates(self, alias):
+        spec = get_national_id(alias, "kmhfl_code")
+        assert spec is not None
+
+        faker = Faker("en_US")
+        register_clinical_providers(faker)
+        faker.seed_instance(861)
+        surrogate = getattr(faker, spec.faker_method)()
+
+        assert spec.faker_method == "kmhfl_code"
+        assert spec.validate(surrogate)
+
+    @pytest.mark.parametrize("alias", ("ng", "en_NG"))
+    def test_nigeria_facility_registry_aliases_generate_valid_surrogates(self, alias):
+        spec = get_national_id(alias, "hfr_facility_code")
+        assert spec is not None
+
+        faker = Faker("en_US")
+        register_clinical_providers(faker)
+        faker.seed_instance(861)
+        surrogate = getattr(faker, spec.faker_method)()
+
+        assert spec.faker_method == "hfr_facility_code"
+        assert spec.validate(surrogate)
 
     def test_duplicate_registration_rejects_key_with_clear_error(self):
         key = ("zz", "dummy")

@@ -45,9 +45,11 @@ from openmed.core.pii_i18n import (
     validate_israeli_teudat_zehut,
     validate_italian_codice_fiscale,
     validate_jmbg,
+    validate_kenya_mfl_code,
     validate_korean_rrn,
     validate_latvian_personas_kods,
     validate_malaysian_mykad,
+    validate_nigeria_hfr_code,
     validate_philhealth_pin,
     validate_philsys_psn,
     validate_polish_pesel,
@@ -75,6 +77,7 @@ from .clinical_ids import (
     DanishCPRProvider,
     EstonianIsikukoodProvider,
     GermanSteuerIdProvider,
+    HealthFacilityCodeProvider,
     HungarianTAJProvider,
     IndonesianNIKProvider,
     IsraeliTeudatZehutProvider,
@@ -523,6 +526,20 @@ def _register_builtin_specs() -> None:
         validate=validate_bc_phn,
         faker_method="bc_phn",
         faker_provider=BCPHNProvider,
+    )
+    _register_aliases(
+        ("ke", "sw", "en_KE"),
+        id_type="kmhfl_code",
+        validate=validate_kenya_mfl_code,
+        faker_method="kmhfl_code",
+        faker_provider=HealthFacilityCodeProvider,
+    )
+    _register_aliases(
+        ("ng", "en_NG"),
+        id_type="hfr_facility_code",
+        validate=validate_nigeria_hfr_code,
+        faker_method="hfr_facility_code",
+        faker_provider=HealthFacilityCodeProvider,
     )
 
 

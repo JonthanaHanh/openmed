@@ -180,6 +180,11 @@ class Anonymizer:
         effective_lang = lang or self.config.lang
         effective_locale = resolve_locale(effective_lang, locale or self.config.locale)
         canonical = normalize_label(label, effective_lang)
+        generator = LABEL_GENERATORS.get(label)
+        generator_seed_label = label
+        if generator is None:
+            generator = LABEL_GENERATORS.get(canonical, LABEL_GENERATORS["OTHER"])
+            generator_seed_label = canonical
 
         # CJK PERSON spans: peel a trailing honorific (さん/様/씨/님/先生/…) so
         # the name is swapped while the honorific is re-attached verbatim.
@@ -202,9 +207,8 @@ class Anonymizer:
 
         faker = self._get_faker(effective_locale)
         if self.config.consistent:
-            faker.seed_instance(self._derive_seed(canonical, seed_value))
+            faker.seed_instance(self._derive_seed(generator_seed_label, seed_value))
 
-        generator = LABEL_GENERATORS.get(canonical, LABEL_GENERATORS["OTHER"])
         try:
             generated = generator(faker, generator_input, locale=effective_locale)
             return f"{generated}{honorific_suffix}"
