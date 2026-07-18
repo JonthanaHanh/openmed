@@ -10,6 +10,12 @@ Notes:
   callers as a ``UserWarning`` the first time it's used.
 - Portuguese defaults to ``pt_PT``; pass ``locale="pt_BR"`` explicitly to
   generate Brazilian-Portuguese surrogates (matters for CPF/CNPJ context).
+- African French and Portuguese conceptual locales (``fr_SN``, ``fr_CI``,
+  ``fr_CM``, ``pt_MZ``, and ``pt_AO``) use curated in-country surrogate data
+  while delegating unsupported Faker methods to ``fr_FR`` or ``pt_PT``.
+- Arabic defaults to ``ar_EG``. Region tags ``ar-DZ`` and ``ar-MA`` select the
+  corresponding Faker overrides ``ar_DZ`` and ``ar_MA`` when installed;
+  unavailable regional backends fall back to ``ar_EG`` with a one-time warning.
 
 Regression contract (OM-135):
 - Every ``openmed.core.pii_i18n.SUPPORTED_LANGUAGES`` code must have a
@@ -76,12 +82,29 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
 _APPROXIMATE_LOCALES: Final = frozenset({"te", "ms", "sr"})
 
 
+# Conceptual locale -> OpenMed model language. These locales deliberately do
+# not become new language packs: they select country-aware surrogate and
+# deterministic-pattern overlays for the existing French and Portuguese packs.
+CONCEPTUAL_LOCALE_LANGUAGES: Final[Mapping[str, str]] = {
+    "fr_SN": "fr",
+    "fr_CI": "fr",
+    "fr_CM": "fr",
+    "pt_MZ": "pt",
+    "pt_AO": "pt",
+}
+
+
 # Conceptual locale -> installed Faker locale. This keeps national-ID dispatch
 # keyed by the target country while allowing generic names/addresses to use a
 # nearby installed Faker backend.
 FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
     "ms_MY": "id_ID",
     "sr_RS": "hr_HR",
+    "fr_SN": "fr_FR",
+    "fr_CI": "fr_FR",
+    "fr_CM": "fr_FR",
+    "pt_MZ": "pt_PT",
+    "pt_AO": "pt_PT",
 }
 
 
@@ -133,10 +156,12 @@ NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
 
 
 # Region-qualified Arabic codes -> Faker locale. Bare ``ar`` stays ``ar_EG``
-# (see LANG_TO_LOCALE); these let callers request a Gulf/Levant flavour so
-# surrogate names, phones and addresses read in-region (OM-285).
+# (see LANG_TO_LOCALE); these let callers request a Maghreb/Gulf/Levant flavour
+# so surrogate names, phones and addresses read in-region (OM-285, OM-866).
 AR_REGION_LOCALES: Final[Mapping[str, str]] = {
     "ar-EG": "ar_EG",  # Egypt (the bare-"ar" default, exposed explicitly too)
+    "ar-DZ": "ar_DZ",  # Algeria / Maghrebi Arabic
+    "ar-MA": "ar_MA",  # Morocco when shipped; otherwise the documented fallback
     "ar-SA": "ar_SA",  # Saudi Arabia
     "ar-AE": "ar_AE",  # United Arab Emirates
     "ar-JO": "ar_JO",  # Jordan
@@ -187,8 +212,10 @@ def resolve_locale(lang: str, locale_override: str | None = None) -> str:
 
     Args:
         lang: ISO 639-1 language code (``en``, ``fr``, ``de``, ...).
-        locale_override: Caller-supplied Faker locale (e.g. ``pt_BR``) or
-            documented region tag (e.g. ``ar-SA``); takes precedence.
+        locale_override: Caller-supplied Faker or conceptual locale (for
+            example, ``pt_BR``, ``fr_SN``, or ``pt_MZ``), or a documented
+            Arabic region tag such as ``ar-DZ`` or ``ar-MA``; takes precedence.
+            The bare ``ar`` default remains ``ar_EG``.
 
     Returns:
         A Faker locale string.
@@ -242,14 +269,13 @@ def resolve_faker_backend_locale(locale: str) -> str:
 
 
 def locale_coherence_report() -> list[dict[str, object]]:
-    """Return one locale-coherence row per supported or ID-only language.
+    """Return locale-coherence rows for defaults and conceptual overrides.
 
     Each row is a plain JSON-friendly ``dict`` (so the status/leaderboard work
     can reuse it) with:
 
       - ``language``: the OpenMed ISO 639-1 code.
-      - ``locale``: the default Faker locale it resolves to (no warning side
-        effect — read straight from :data:`LANG_TO_LOCALE`).
+      - ``locale``: the default or conceptual locale.
       - ``approximate``: ``True`` when that default locale is a documented
         approximation rather than a native match.
       - ``id_providers``: national-ID Faker method names whose surrogates
@@ -277,11 +303,25 @@ def locale_coherence_report() -> list[dict[str, object]]:
                 "id_locale": id_locale,
             }
         )
+
+    for locale, lang in sorted(CONCEPTUAL_LOCALE_LANGUAGES.items()):
+        rows.append(
+            {
+                "language": lang,
+                "locale": locale,
+                "approximate": False,
+                # Senegal CNI and Angola BI coverage is structural/contextual,
+                # not checksum-backed, so no provider or validator is claimed.
+                "id_providers": [],
+                "id_locale": None,
+            }
+        )
     return rows
 
 
 __all__ = [
     "AR_REGION_LOCALES",
+    "CONCEPTUAL_LOCALE_LANGUAGES",
     "LANG_TO_LOCALE",
     "FAKER_BACKEND_LOCALE",
     "NATIONAL_ID_PROVIDERS",

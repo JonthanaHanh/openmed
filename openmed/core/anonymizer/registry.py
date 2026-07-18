@@ -33,16 +33,29 @@ Generator = Callable[..., str]
 # ---------------------------------------------------------------------------
 
 
+def _locale_fake_value(faker, locale, key, original):
+    """Draw a curated value for an OpenMed conceptual locale, if present."""
+    from ..pii_i18n import LOCALE_FAKE_DATA
+
+    values = LOCALE_FAKE_DATA.get(locale, {}).get(key, ())
+    if not values:
+        return None
+    alternatives = tuple(value for value in values if value != original)
+    return faker.random_element(alternatives or tuple(values))
+
+
 def _gen_person(faker, original, *, locale):
-    return faker.name()
+    return _locale_fake_value(faker, locale, "NAME", original) or faker.name()
 
 
 def _gen_first_name(faker, original, *, locale):
-    return faker.first_name()
+    return (
+        _locale_fake_value(faker, locale, "FIRST_NAME", original) or faker.first_name()
+    )
 
 
 def _gen_last_name(faker, original, *, locale):
-    return faker.last_name()
+    return _locale_fake_value(faker, locale, "LAST_NAME", original) or faker.last_name()
 
 
 def _gen_middle_name(faker, original, *, locale):
@@ -68,6 +81,9 @@ def _gen_email(faker, original, *, locale):
 
 
 def _gen_phone(faker, original, *, locale):
+    curated = _locale_fake_value(faker, locale, "PHONE", original)
+    if curated is not None:
+        return curated
     if any(ch.isdigit() for ch in original):
         return preserve_phone_format(original, rng=faker.random)
     return faker.phone_number()
@@ -84,11 +100,14 @@ def _gen_url(faker, original, *, locale):
 
 def _gen_location(faker, original, *, locale):
     # Prefer city-level granularity since most "LOCATION" detections are cities
-    return faker.city()
+    return _locale_fake_value(faker, locale, "LOCATION", original) or faker.city()
 
 
 def _gen_street_address(faker, original, *, locale):
-    return faker.street_address()
+    return (
+        _locale_fake_value(faker, locale, "STREET_ADDRESS", original)
+        or faker.street_address()
+    )
 
 
 def _gen_building_number(faker, original, *, locale):
