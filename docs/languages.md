@@ -59,6 +59,12 @@ validator-backed national-ID coverage
 (`openmed.core.pii_i18n.NATIONAL_ID_ONLY_LANGUAGES`); see
 [PII Anonymization](anonymization.md#clinical-id-checksums) for the ID providers.
 
+Igbo (`ig`) is available through that deterministic pattern-pack path with a
+native `ig_NG` surrogate locale. It recognizes Nigeria NINs, `+234` phones,
+dates, and ages in Igbo and English-Igbo clinical text, including decomposed or
+unmarked context cues. Replacement spans expand to whole base-plus-diacritic
+clusters so dot-below vowels cannot be split or left behind.
+
 ## Worked examples
 
 Each example de-identifies synthetic, non-PHI text with `method="mask"`. The

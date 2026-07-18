@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a deterministic Igbo (`ig`) PII pack for Nigerian clinical text with
+  shared Nigeria NIN and `+234` phone patterns, native `ig_NG` surrogates,
+  Igbo-only and English-Igbo synthetic leakage fixtures, and grapheme-safe
+  NFC/NFD replacement offsets (#1441).
 - Added an offline Vietnamese (`vi`) PII language pack with context-gated CCCD
   and legacy CMND detection, Vietnamese dates, phone numbers, addresses and
   five-digit postal codes, plus `vi_VN` surrogates and a synthetic golden

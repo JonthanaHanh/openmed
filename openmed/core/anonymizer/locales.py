@@ -68,6 +68,7 @@ LANG_TO_LOCALE: Final[Mapping[str, str]] = {
     "et": "et_EE",
     "el": "el_GR",
     "vi": "vi_VN",
+    "ig": "ig_NG",
 }
 
 
