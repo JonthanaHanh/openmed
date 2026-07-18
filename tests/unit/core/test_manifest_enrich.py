@@ -19,6 +19,8 @@ def test_enrich_manifest_merges_measurements_by_repo_id_and_preserves_unmatched(
     ]
     measurements = {
         "OpenMed/OpenMed-PII-Fixture-Tiny-65M": {
+            "download_mb": 131.794,
+            "disk_mb": 131.794,
             "latency_ms": {"iphone_15_pro": 18.4, "m2_air": 7.0},
             "peak_ram_mb": {"iphone_15_pro": 512, "m2_air": 384},
             "recommended_tier": "phone",
@@ -38,6 +40,8 @@ def test_enrich_manifest_merges_measurements_by_repo_id_and_preserves_unmatched(
 
     assert updated == 1
     enriched = json.loads(output[0])
+    assert enriched["download_mb"] == 131.794
+    assert enriched["disk_mb"] == 131.794
     assert enriched["latency_ms"] == {"iphone_15_pro": 18.4, "m2_air": 7.0}
     assert enriched["peak_ram_mb"] == {"iphone_15_pro": 512, "m2_air": 384}
     assert enriched["recommended_tier"] == "phone"
