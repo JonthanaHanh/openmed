@@ -393,7 +393,9 @@ class LocalePhiGenerator:
     def _identifier(self, language: str) -> tuple[str, Mapping[str, Any]]:
         seed = self._field_seed(language, "identifier")
         if language in NATIONAL_ID_PROVIDERS:
-            id_locale, method = NATIONAL_ID_PROVIDERS[language]
+            _id_type, (id_locale, method) = next(
+                iter(NATIONAL_ID_PROVIDERS[language].items())
+            )
             value = self._surrogate(
                 language,
                 L.ID_NUM,

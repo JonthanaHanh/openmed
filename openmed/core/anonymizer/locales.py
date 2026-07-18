@@ -86,49 +86,58 @@ FAKER_BACKEND_LOCALE: Final[Mapping[str, str]] = {
 
 
 # Per-language national-ID surrogate providers — the single source of truth for
-# the OM-135 round-trip fidelity suite. Maps each language that has a
-# validator-backed national ID to the ``(faker_locale, faker_method)`` whose
-# generated surrogates pass that language's registered validator(s) in
+# the OM-135 round-trip fidelity suite. Maps each language and stable ID type to
+# the ``(faker_locale, faker_method)`` whose generated surrogates pass that ID's
+# registered validator in
 # :mod:`openmed.core.pii_i18n`. The locale here can differ from the language's
 # default display locale when the registered validators target another country's
 # format: Portuguese national-ID validation is Brazilian CPF/CNPJ, so ``pt``
 # draws ID surrogates from ``pt_BR`` even though its default locale (names,
-# addresses, ...) stays ``pt_PT``. The method must match the registry's
-# locale-aware dispatch (``registry._LOCALE_ID_METHODS``); the regression suite
-# asserts that and the round-trip.
-NATIONAL_ID_PROVIDERS: Final[Mapping[str, tuple[str, str]]] = {
-    "en": ("en_US", "ssn"),
-    "fr": ("fr_FR", "ssn"),  # NIR / INSEE
-    "de": ("de_DE", "german_steuer_id"),  # Steuer-ID
-    "it": ("it_IT", "ssn"),  # Codice Fiscale
-    "es": ("es_ES", "nie"),  # NIE
-    "nl": ("nl_NL", "ssn"),  # BSN
-    "hi": ("hi_IN", "aadhaar"),  # Aadhaar (Verhoeff)
-    "te": ("en_IN", "aadhaar"),  # Aadhaar via approximate en_IN
+# addresses, ...) stays ``pt_PT``. The first entry is the generic ID_NUM
+# dispatch method; additional entries are selected by their recognized shape.
+NATIONAL_ID_PROVIDERS: Final[Mapping[str, Mapping[str, tuple[str, str]]]] = {
+    "en": {"ssn": ("en_US", "ssn")},
+    "fr": {"nir": ("fr_FR", "ssn")},
+    "de": {"steuer_id": ("de_DE", "german_steuer_id")},
+    "it": {"codice_fiscale": ("it_IT", "ssn")},
+    "es": {"nie": ("es_ES", "nie")},
+    "nl": {"bsn": ("nl_NL", "ssn")},
+    "hi": {
+        "aadhaar": ("hi_IN", "aadhaar"),
+        "pan": ("hi_IN", "pan"),
+        "gstin": ("hi_IN", "gstin"),
+        "abha": ("hi_IN", "abha"),
+    },
+    "te": {
+        "aadhaar": ("en_IN", "aadhaar"),
+        "pan": ("en_IN", "pan"),
+        "gstin": ("en_IN", "gstin"),
+        "abha": ("en_IN", "abha"),
+    },
     # CPF drives the OM-135 coherence round-trip; pt_PT surrogates draw NIF via
     # the locale-keyed registry dispatch (``registry._LOCALE_ID_METHODS``).
-    "pt": ("pt_BR", "cpf"),
-    "tr": ("tr_TR", "ssn"),  # TCKN
-    "he": ("he_IL", "teudat_zehut"),  # Israeli Teudat Zehut
-    "id": ("id_ID", "indonesian_nik"),  # NIK
-    "th": ("th_TH", "thai_national_id"),  # Thai 13-digit national ID
-    "pl": ("pl_PL", "pesel"),  # PESEL
-    "lv": ("lv_LV", "personas_kods"),
-    "ko": ("ko_KR", "korean_rrn"),  # RRN
-    "cs": ("cs_CZ", "rodne_cislo"),  # Czech rodne cislo (shared provider)
-    "sk": ("sk_SK", "rodne_cislo"),  # Slovak rodne cislo
-    "ms": ("ms_MY", "mykad"),  # Malaysian MyKad / NRIC
-    "tl": ("fil_PH", "philsys_psn"),  # Philippine PhilSys PSN
-    "da": ("da_DK", "danish_cpr"),  # Danish CPR / personnummer
-    "ro": ("ro_RO", "romanian_cnp"),  # CNP (Cod Numeric Personal)
-    "fi": ("fi_FI", "ssn"),  # Finnish HETU (Faker's native fi_FI ssn)
-    "bg": ("bg_BG", "egn"),  # Bulgarian EGN (unified civil number)
-    "hr": ("hr_HR", "ssn"),  # Croatian OIB (Faker's native hr_HR ssn)
-    "sr": ("sr_RS", "jmbg"),  # Serbian / ex-Yugoslav JMBG
-    "hu": ("hu_HU", "hungarian_taj"),  # TAJ social-security identifier
-    "et": ("et_EE", "isikukood"),  # Estonian isikukood
-    "el": ("el_GR", "ssn"),  # Greek AMKA (Faker's native el_GR ssn)
-    "vi": ("vi_VN", "vietnamese_cccd"),  # 12-digit CCCD
+    "pt": {"cpf": ("pt_BR", "cpf")},
+    "tr": {"tckn": ("tr_TR", "ssn")},
+    "he": {"teudat_zehut": ("he_IL", "teudat_zehut")},
+    "id": {"nik": ("id_ID", "indonesian_nik")},
+    "th": {"thai_national_id": ("th_TH", "thai_national_id")},
+    "pl": {"pesel": ("pl_PL", "pesel")},
+    "lv": {"personas_kods": ("lv_LV", "personas_kods")},
+    "ko": {"rrn": ("ko_KR", "korean_rrn")},
+    "cs": {"rodne_cislo": ("cs_CZ", "rodne_cislo")},
+    "sk": {"rodne_cislo": ("sk_SK", "rodne_cislo")},
+    "ms": {"mykad": ("ms_MY", "mykad")},
+    "tl": {"philsys_psn": ("fil_PH", "philsys_psn")},
+    "da": {"cpr": ("da_DK", "danish_cpr")},
+    "ro": {"cnp": ("ro_RO", "romanian_cnp")},
+    "fi": {"hetu": ("fi_FI", "ssn")},
+    "bg": {"egn": ("bg_BG", "egn")},
+    "hr": {"oib": ("hr_HR", "ssn")},
+    "sr": {"jmbg": ("sr_RS", "jmbg")},
+    "hu": {"taj": ("hu_HU", "hungarian_taj")},
+    "et": {"isikukood": ("et_EE", "isikukood")},
+    "el": {"amka": ("el_GR", "ssn")},
+    "vi": {"cccd": ("vi_VN", "vietnamese_cccd")},
 }
 
 
@@ -255,6 +264,7 @@ def locale_coherence_report() -> list[dict[str, object]]:
       - ``id_providers``: national-ID Faker method names whose surrogates
         round-trip the language's registered checksum validator (empty when the
         language has no checksummed national-ID surrogate provider).
+      - ``id_types``: stable registry ID types covered by ``id_providers``.
       - ``id_locale``: the Faker locale those providers are drawn from, or
         ``None``. Usually equals ``locale``; differs when the registered
         validators target another country's format (e.g. ``pt`` -> ``pt_BR``).
@@ -266,14 +276,17 @@ def locale_coherence_report() -> list[dict[str, object]]:
 
     rows: list[dict[str, object]] = []
     for lang in sorted(SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES):
-        provider: tuple[str, str] | None = NATIONAL_ID_PROVIDERS.get(lang)
-        id_locale, id_method = provider if provider else (None, None)
+        providers = NATIONAL_ID_PROVIDERS.get(lang, {})
+        provider_values = tuple(providers.values())
+        id_locales = {locale for locale, _method in provider_values}
+        id_locale = next(iter(id_locales)) if len(id_locales) == 1 else None
         rows.append(
             {
                 "language": lang,
                 "locale": LANG_TO_LOCALE.get(lang, LANG_TO_LOCALE["en"]),
                 "approximate": lang in _APPROXIMATE_LOCALES,
-                "id_providers": [id_method] if id_method else [],
+                "id_providers": [method for _locale, method in provider_values],
+                "id_types": list(providers),
                 "id_locale": id_locale,
             }
         )

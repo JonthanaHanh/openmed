@@ -76,6 +76,7 @@ from .clinical_ids import (
     EstonianIsikukoodProvider,
     GermanSteuerIdProvider,
     HungarianTAJProvider,
+    IndiaSurrogateProvider,
     IndonesianNIKProvider,
     IsraeliTeudatZehutProvider,
     KoreanRRNProvider,
@@ -95,12 +96,15 @@ from .clinical_ids import (
     UKNHSNumberProvider,
     UKNINOProvider,
     VietnameseIdProvider,
+    validate_abha,
     validate_australian_medicare,
     validate_australian_tfn,
     validate_bc_phn,
     validate_canadian_sin,
+    validate_gstin,
     validate_npi,
     validate_ontario_health_card,
+    validate_pan,
 )
 
 NationalIdValidator = Callable[[str], bool]
@@ -284,6 +288,28 @@ def _register_builtin_specs() -> None:
         validate=validate_aadhaar,
         faker_method="aadhaar",
         faker_provider=AadhaarProvider,
+    )
+    india_aliases = ("in", "india", "hi", "te", "en_IN", "hi_IN")
+    _register_aliases(
+        india_aliases,
+        id_type="pan",
+        validate=validate_pan,
+        faker_method="pan",
+        faker_provider=IndiaSurrogateProvider,
+    )
+    _register_aliases(
+        india_aliases,
+        id_type="gstin",
+        validate=validate_gstin,
+        faker_method="gstin",
+        faker_provider=IndiaSurrogateProvider,
+    )
+    _register_aliases(
+        india_aliases,
+        id_type="abha",
+        validate=validate_abha,
+        faker_method="abha",
+        faker_provider=IndiaSurrogateProvider,
     )
     _register_aliases(
         ("id", "id_ID"),

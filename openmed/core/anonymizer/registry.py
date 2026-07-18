@@ -14,6 +14,7 @@ so callers should run ``normalize_label(model_label)`` before lookup.
 
 from __future__ import annotations
 
+import re
 from typing import Callable, Dict
 
 from .. import labels as L
@@ -26,6 +27,30 @@ from .format_preserve import (
 
 Generator = Callable[..., str]
 """Signature: ``(faker, original: str, *, locale: str) -> str``."""
+
+_INDIA_LOCALES = frozenset({"en_IN", "hi_IN"})
+
+
+def _contains_original_fragment(original: str, candidate: str) -> bool:
+    """Return whether a meaningful original token survives in ``candidate``."""
+
+    fragments = re.findall(
+        r"[A-Za-z]{3,}|\d{4,}|[\u0900-\u097f]{3,}",
+        original,
+    )
+    folded_candidate = candidate.casefold()
+    return any(fragment.casefold() in folded_candidate for fragment in fragments)
+
+
+def _draw_distinct(faker, original: str, method: str) -> str:
+    """Draw from ``method`` without retaining meaningful original fragments."""
+
+    candidate = ""
+    for _ in range(20):
+        candidate = str(getattr(faker, method)())
+        if not _contains_original_fragment(original, candidate):
+            return candidate
+    return candidate
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +72,30 @@ def _gen_last_name(faker, original, *, locale):
 
 def _gen_middle_name(faker, original, *, locale):
     return faker.first_name()
+
+
+def _gen_india_person(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_name"):
+        return _draw_distinct(faker, original, "indian_name")
+    return _gen_person(faker, original, locale=locale)
+
+
+def _gen_india_first_name(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_first_name"):
+        return _draw_distinct(faker, original, "indian_first_name")
+    return _gen_first_name(faker, original, locale=locale)
+
+
+def _gen_india_last_name(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_last_name"):
+        return _draw_distinct(faker, original, "indian_last_name")
+    return _gen_last_name(faker, original, locale=locale)
+
+
+def _gen_india_middle_name(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_first_name"):
+        return _draw_distinct(faker, original, "indian_first_name")
+    return _gen_middle_name(faker, original, locale=locale)
 
 
 def _gen_prefix(faker, original, *, locale):
@@ -73,6 +122,12 @@ def _gen_phone(faker, original, *, locale):
     return faker.phone_number()
 
 
+def _gen_india_phone(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_phone_number"):
+        return _draw_distinct(faker, original, "indian_phone_number")
+    return _gen_phone(faker, original, locale=locale)
+
+
 def _gen_url(faker, original, *, locale):
     return faker.url()
 
@@ -91,6 +146,12 @@ def _gen_street_address(faker, original, *, locale):
     return faker.street_address()
 
 
+def _gen_india_street_address(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_address"):
+        return _draw_distinct(faker, original, "indian_address")
+    return _gen_street_address(faker, original, locale=locale)
+
+
 def _gen_building_number(faker, original, *, locale):
     return faker.building_number()
 
@@ -99,6 +160,12 @@ def _gen_zipcode(faker, original, *, locale):
     if any(ch.isdigit() or ch.isalpha() for ch in original):
         return preserve_id_pattern(original, rng=faker.random)
     return faker.postcode()
+
+
+def _gen_india_zipcode(faker, original, *, locale):
+    if locale in _INDIA_LOCALES and hasattr(faker, "indian_pin"):
+        return _draw_distinct(faker, original, "indian_pin")
+    return _gen_zipcode(faker, original, locale=locale)
 
 
 def _gen_gps(faker, original, *, locale):
@@ -242,6 +309,39 @@ def _gen_id_num(faker, original, *, locale):
     if method and hasattr(faker, method):
         return getattr(faker, method)()
     return preserve_id_pattern(original, rng=faker.random)
+
+
+def _indian_id_surrogate(faker, original):
+    """Return a validator-compatible Indian ID surrogate when recognized."""
+
+    if not original:
+        return None
+
+    from openmed.core.anonymizer.providers.clinical_ids import (
+        validate_abha,
+        validate_gstin,
+        validate_pan,
+    )
+    from openmed.core.pii_i18n import validate_aadhaar
+
+    validators_and_methods = (
+        (validate_gstin, "gstin"),
+        (validate_pan, "pan"),
+        (validate_abha, "abha"),
+        (validate_aadhaar, "aadhaar"),
+    )
+    for validator, method in validators_and_methods:
+        if validator(original) and hasattr(faker, method):
+            return _draw_distinct(faker, original, method)
+    return None
+
+
+def _gen_india_id_num(faker, original, *, locale):
+    if locale in _INDIA_LOCALES:
+        surrogate = _indian_id_surrogate(faker, original)
+        if surrogate is not None:
+            return surrogate
+    return _gen_id_num(faker, original, locale=locale)
 
 
 def _gen_ssn(faker, original, *, locale):
@@ -524,8 +624,29 @@ def register_label_generator(canonical_label: str, generator: Generator) -> None
     LABEL_GENERATORS[canonical_label] = generator
 
 
+def register_india_label_generators() -> None:
+    """Install locale-gated India surrogate generators in the label registry."""
+
+    india_generators = {
+        L.PERSON: _gen_india_person,
+        L.FIRST_NAME: _gen_india_first_name,
+        L.LAST_NAME: _gen_india_last_name,
+        L.MIDDLE_NAME: _gen_india_middle_name,
+        L.PHONE: _gen_india_phone,
+        L.STREET_ADDRESS: _gen_india_street_address,
+        L.ZIPCODE: _gen_india_zipcode,
+        L.ID_NUM: _gen_india_id_num,
+    }
+    for canonical_label, generator in india_generators.items():
+        register_label_generator(canonical_label, generator)
+
+
+register_india_label_generators()
+
+
 __all__ = [
     "Generator",
     "LABEL_GENERATORS",
+    "register_india_label_generators",
     "register_label_generator",
 ]

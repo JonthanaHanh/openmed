@@ -20,9 +20,9 @@ import json
 import warnings
 
 import pytest
+from faker import Faker
 from faker.config import AVAILABLE_LOCALES
 
-from openmed.core.anonymizer import Anonymizer
 from openmed.core.anonymizer import locales as L
 from openmed.core.anonymizer.locales import (
     FAKER_BACKEND_LOCALE,
@@ -31,6 +31,8 @@ from openmed.core.anonymizer.locales import (
     locale_coherence_report,
     resolve_locale,
 )
+from openmed.core.anonymizer.providers.clinical_ids import register_clinical_providers
+from openmed.core.anonymizer.providers.registry_ids import get_national_id
 from openmed.core.anonymizer.registry import _LOCALE_ID_METHODS
 from openmed.core.pii_entity_merger import PII_PATTERNS
 from openmed.core.pii_i18n import (
@@ -108,15 +110,22 @@ class TestNationalIdRoundTrip:
     def test_contract_matches_registry_dispatch(self):
         """Each provider's method must match the registry's locale dispatch and
         point at a real Faker locale."""
-        for lang, (locale, method) in NATIONAL_ID_PROVIDERS.items():
-            backend_locale = FAKER_BACKEND_LOCALE.get(locale, locale)
-            assert backend_locale in AVAILABLE_LOCALES, (
-                f"{lang!r} -> unknown Faker backend locale {backend_locale!r}"
-            )
-            assert _LOCALE_ID_METHODS.get(locale) == method, (
-                f"{lang!r} provider {method!r} disagrees with registry dispatch "
-                f"for {locale!r} ({_LOCALE_ID_METHODS.get(locale)!r})"
-            )
+        for lang, providers in NATIONAL_ID_PROVIDERS.items():
+            for index, (id_type, (locale, method)) in enumerate(providers.items()):
+                backend_locale = FAKER_BACKEND_LOCALE.get(locale, locale)
+                assert backend_locale in AVAILABLE_LOCALES, (
+                    f"{lang!r}/{id_type!r} -> unknown Faker backend locale "
+                    f"{backend_locale!r}"
+                )
+                if index == 0:
+                    assert _LOCALE_ID_METHODS.get(locale) == method, (
+                        f"{lang!r} primary provider {method!r} disagrees with "
+                        f"registry dispatch for {locale!r} "
+                        f"({_LOCALE_ID_METHODS.get(locale)!r})"
+                    )
+                spec = get_national_id(lang, id_type)
+                if spec is not None:
+                    assert spec.faker_method == method
 
     def test_providerless_validators_are_documented(self):
         """A national-ID validator with no surrogate provider is a known gap;
@@ -131,19 +140,24 @@ class TestNationalIdRoundTrip:
 
     @pytest.mark.parametrize("lang", sorted(NATIONAL_ID_PROVIDERS))
     def test_generated_national_ids_pass_registered_validator(self, lang):
-        locale, _method = NATIONAL_ID_PROVIDERS[lang]
-        validators = _national_id_validators(lang)
-        assert validators, f"no national-ID validator registered for {lang!r}"
-        for seed in range(SAMPLE_SIZE):
-            anon = Anonymizer(lang=lang, consistent=True, seed=seed)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                surrogate = anon.surrogate("123456789", "national_id", locale=locale)
-            assert any(v(surrogate) for v in validators), (
-                f"{lang!r} surrogate {surrogate!r} (seed={seed}, locale={locale}) "
-                f"failed every registered validator "
-                f"{[v.__name__ for v in validators]}"
+        for id_type, (locale, method) in NATIONAL_ID_PROVIDERS[lang].items():
+            spec = get_national_id(lang, id_type)
+            validators = (
+                [spec.validate] if spec is not None else _national_id_validators(lang)
             )
+            assert validators, (
+                f"no national-ID validator registered for {lang!r}/{id_type!r}"
+            )
+            faker = Faker(FAKER_BACKEND_LOCALE.get(locale, locale))
+            register_clinical_providers(faker)
+            for seed in range(SAMPLE_SIZE):
+                faker.seed_instance(seed)
+                surrogate = getattr(faker, method)()
+                assert any(validator(surrogate) for validator in validators), (
+                    f"{lang!r}/{id_type!r} surrogate {surrogate!r} "
+                    f"(seed={seed}, locale={locale}) failed every registered "
+                    f"validator {[validator.__name__ for validator in validators]}"
+                )
 
 
 class TestApproximateLocaleWarnings:
@@ -177,6 +191,7 @@ class TestLocaleCoherenceReport:
                 "locale",
                 "approximate",
                 "id_providers",
+                "id_types",
                 "id_locale",
             }
             assert row["locale"] == LANG_TO_LOCALE[lang]
@@ -184,11 +199,17 @@ class TestLocaleCoherenceReport:
             assert row["approximate"] == (lang in DOCUMENTED_APPROXIMATE)
             assert isinstance(row["id_providers"], list)
             if lang in NATIONAL_ID_PROVIDERS:
-                exp_locale, exp_method = NATIONAL_ID_PROVIDERS[lang]
-                assert row["id_providers"] == [exp_method]
-                assert row["id_locale"] == exp_locale
+                providers = NATIONAL_ID_PROVIDERS[lang]
+                assert row["id_types"] == list(providers)
+                assert row["id_providers"] == [
+                    method for _locale, method in providers.values()
+                ]
+                assert row["id_locale"] == next(
+                    iter({locale for locale, _method in providers.values()})
+                )
             else:
                 assert row["id_providers"] == []
+                assert row["id_types"] == []
                 assert row["id_locale"] is None
 
     def test_report_is_json_serializable(self):
