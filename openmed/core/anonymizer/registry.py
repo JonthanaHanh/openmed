@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Callable, Dict
 
 from .. import labels as L
+from ..language_pack import LanguagePack, register_language_pack
 from .format_preserve import (
     preserve_date_format,
     preserve_email_pattern,
@@ -514,18 +515,85 @@ LABEL_GENERATORS: Dict[str, Generator] = {
     L.OTHER: _gen_other,
 }
 
+LANGUAGE_PACK_GENERATORS: Dict[tuple[str, str, str], Generator] = {}
+"""Script-specific generators keyed by ``(pack code, script, label)``."""
 
-def register_label_generator(canonical_label: str, generator: Generator) -> None:
+
+def register_label_generator(
+    canonical_label: str,
+    generator: Generator,
+    *,
+    language_pack: LanguagePack | None = None,
+    script: str | None = None,
+) -> None:
     """Register or override a generator for a canonical label.
 
     Use to extend coverage (new label types) or to swap in a domain-
-    specific generator (e.g. project-specific medical record format).
+    specific generator (e.g. project-specific medical record format). Pass a
+    ``language_pack`` and one of its ``script`` values to register a
+    script-specific generator without changing the global Faker fallback.
     """
-    LABEL_GENERATORS[canonical_label] = generator
+
+    if language_pack is None:
+        if script is not None:
+            raise ValueError("script requires a language_pack")
+        LABEL_GENERATORS[canonical_label] = generator
+        return
+
+    if script is None:
+        raise ValueError("language_pack generators require a script")
+    if script not in language_pack.scripts:
+        raise ValueError(
+            f"script {script!r} is not declared by language pack {language_pack.code!r}"
+        )
+    register_language_pack(language_pack)
+    LANGUAGE_PACK_GENERATORS[(language_pack.code, script, canonical_label)] = generator
+
+
+def resolve_label_generator(
+    canonical_label: str,
+    *,
+    language_pack: LanguagePack | None,
+    script: str,
+) -> tuple[Generator, bool]:
+    """Resolve a script-aware generator before the global Faker fallback.
+
+    Returns:
+        A ``(generator, is_script_specific)`` pair. The flag lets locale
+        resolution suppress approximation warnings only when Faker's locale
+        data is not being used for the selected provider.
+    """
+
+    if language_pack is not None and script in language_pack.scripts:
+        generator = LANGUAGE_PACK_GENERATORS.get(
+            (language_pack.code, script, canonical_label)
+        )
+        if generator is not None:
+            return generator, True
+    return LABEL_GENERATORS.get(canonical_label, LABEL_GENERATORS[L.OTHER]), False
+
+
+def _register_builtin_script_name_generators() -> None:
+    from .providers.script_names import SCRIPT_NAME_PACKS
+
+    name_labels = (L.PERSON, L.FIRST_NAME, L.LAST_NAME, L.MIDDLE_NAME)
+    for language_pack, script, generator in SCRIPT_NAME_PACKS:
+        for canonical_label in name_labels:
+            register_label_generator(
+                canonical_label,
+                generator,
+                language_pack=language_pack,
+                script=script,
+            )
+
+
+_register_builtin_script_name_generators()
 
 
 __all__ = [
     "Generator",
+    "LANGUAGE_PACK_GENERATORS",
     "LABEL_GENERATORS",
     "register_label_generator",
+    "resolve_label_generator",
 ]

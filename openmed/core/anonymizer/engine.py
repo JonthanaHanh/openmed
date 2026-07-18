@@ -35,7 +35,9 @@ from typing import Any, Dict, Optional
 
 from .. import labels as L
 from ..labels import normalize_label
+from ..language_pack import get_language_pack
 from ..name_order import CJK_LANGUAGES, normalize_person_span
+from ..script_detect import detect_script
 from .format_preserve import (
     preserve_date_format,
     preserve_email_pattern,
@@ -44,7 +46,7 @@ from .format_preserve import (
 )
 from .locales import resolve_faker_backend_locale, resolve_locale
 from .providers import register_clinical_providers
-from .registry import LABEL_GENERATORS
+from .registry import resolve_label_generator
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -178,7 +180,6 @@ class Anonymizer:
             when no specific generator is registered.
         """
         effective_lang = lang or self.config.lang
-        effective_locale = resolve_locale(effective_lang, locale or self.config.locale)
         canonical = normalize_label(label, effective_lang)
 
         # CJK PERSON spans: peel a trailing honorific (さん/様/씨/님/先生/…) so
@@ -200,11 +201,22 @@ class Anonymizer:
                 seed_value = core_name
                 generator_input = core_name
 
+        script = detect_script(generator_input)
+        language_pack = get_language_pack(effective_lang)
+        generator, is_script_specific = resolve_label_generator(
+            canonical,
+            language_pack=language_pack,
+            script=script,
+        )
+        effective_locale = resolve_locale(
+            effective_lang,
+            locale or self.config.locale,
+            warn_approximation=not is_script_specific,
+        )
         faker = self._get_faker(effective_locale)
         if self.config.consistent:
             faker.seed_instance(self._derive_seed(canonical, seed_value))
 
-        generator = LABEL_GENERATORS.get(canonical, LABEL_GENERATORS["OTHER"])
         try:
             generated = generator(faker, generator_input, locale=effective_locale)
             return f"{generated}{honorific_suffix}"

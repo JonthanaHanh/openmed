@@ -18,6 +18,13 @@ from .hf_hub import (
     prefetch_model,
     resolve_repo_id,
 )
+from .language_pack import (
+    LANGUAGE_PACK_REGISTRY,
+    LanguagePack,
+    LanguagePackRegistry,
+    get_language_pack,
+    register_language_pack,
+)
 from .model_search import ModelQuery, ModelSearchResult, search_models
 from .models import ModelLoader, load_model
 from .offline import OfflineModeError
@@ -107,4 +114,9 @@ __all__ = [
     "clear_cached_model",
     "resolve_repo_id",
     "CachedModel",
+    "LANGUAGE_PACK_REGISTRY",
+    "LanguagePack",
+    "LanguagePackRegistry",
+    "get_language_pack",
+    "register_language_pack",
 ]
