@@ -146,6 +146,7 @@ class PipelineContext:
     normalized_text: str
     offset_map: OffsetMap
     route: LanguageRoute
+    locale: str | None = None
     section_metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -363,6 +364,7 @@ class Pipeline:
             normalized_text=normalized.normalized_text,
             offset_map=normalized.offset_map,
             route=route,
+            locale=locale,
             section_metadata=section_metadata,
         )
 
@@ -517,7 +519,9 @@ class Pipeline:
 
             with _stage_timer(stage_durations_ms, STAGE_NAMES[4]):
                 pii_result = self.stage5_fast_pii_model(
-                    normalized.normalized_text, route
+                    normalized.normalized_text,
+                    route,
+                    locale=locale,
                 )
                 self._apply_calibration_thresholds(pii_result, route)
                 model_spans = self._entities_to_spans(
@@ -881,7 +885,7 @@ class Pipeline:
             text,
             [],
             lang=context.route.lang,
-            patterns=_deterministic_patterns(context.route.lang),
+            patterns=_deterministic_patterns(context.route.lang, context.locale),
         )
         return (
             self._entities_to_spans(
@@ -899,7 +903,13 @@ class Pipeline:
             )
         )
 
-    def stage5_fast_pii_model(self, text: str, route: LanguageRoute) -> Any:
+    def stage5_fast_pii_model(
+        self,
+        text: str,
+        route: LanguageRoute,
+        *,
+        locale: str | None = None,
+    ) -> Any:
         if self.model_detector is not None:
             return self.model_detector(
                 text,
@@ -908,6 +918,7 @@ class Pipeline:
                 config=self.config,
                 use_smart_merging=self.use_smart_merging,
                 lang=route.lang,
+                locale=locale,
                 normalize_accents=self.normalize_accents,
                 loader=self.loader,
             )
@@ -921,6 +932,7 @@ class Pipeline:
             self.config,
             self.use_smart_merging,
             lang=route.lang,
+            locale=locale,
             normalize_accents=self.normalize_accents,
             loader=self.loader,
         )
@@ -1075,6 +1087,7 @@ class Pipeline:
                 text,
                 pii_result,
                 lang=context.route.lang,
+                locale=context.locale,
             )
         after = _redacted_char_count(getattr(pii_result, "entities", ()))
         if after < before:
@@ -1551,7 +1564,10 @@ def _lang_from_script(script: str) -> str:
     }.get(script, "en")
 
 
-def _deterministic_patterns(lang: str) -> list[PIIPattern]:
+def _deterministic_patterns(
+    lang: str,
+    locale: str | None = None,
+) -> list[PIIPattern]:
     from .anonymizer.providers import clinical_ids
 
     luhn_mrn = PIIPattern(
@@ -1568,7 +1584,7 @@ def _deterministic_patterns(lang: str) -> list[PIIPattern]:
 
     from .pii_i18n import get_patterns_for_language
 
-    return [luhn_mrn, *get_patterns_for_language(lang)]
+    return [luhn_mrn, *get_patterns_for_language(lang, locale=locale)]
 
 
 def _entity_bounds(entity: Any, text: str) -> tuple[int, int] | None:

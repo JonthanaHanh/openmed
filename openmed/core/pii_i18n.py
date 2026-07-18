@@ -30,6 +30,7 @@ from .anonymizer.providers.clinical_ids import (
     validate_uk_nhs_number,
     validate_uk_nino,
 )
+from .locale_formats import LOCALE_PII_FORMATS, LocalePIIFormat
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1971,6 +1972,117 @@ def generate_mrz_td1(rng=None) -> str:
 # ---------------------------------------------------------------------------
 
 from .pii_entity_merger import PIIPattern  # noqa: E402
+
+_EGYPTIAN_NATIONAL_ID_GOVERNORATE_CODES = frozenset(
+    {
+        "01",
+        "02",
+        "03",
+        "04",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25",
+        "26",
+        "27",
+        "28",
+        "29",
+        "31",
+        "32",
+        "33",
+        "34",
+        "35",
+        "88",
+    }
+)
+
+
+def _ascii_decimal_digits(text: str) -> str | None:
+    digits: list[str] = []
+    for char in text:
+        if not char.isdecimal():
+            return None
+        try:
+            digits.append(str(int(char)))
+        except ValueError:
+            return None
+    return "".join(digits)
+
+
+def validate_egyptian_national_id(text: str) -> bool:
+    """Validate the public structure of an Egyptian 14-digit national ID."""
+
+    if not isinstance(text, str):
+        return False
+    digits = _ascii_decimal_digits(text.strip())
+    if digits is None or len(digits) != 14 or digits[0] not in {"2", "3"}:
+        return False
+
+    century = 1900 if digits[0] == "2" else 2000
+    try:
+        birth_date = date(
+            century + int(digits[1:3]),
+            int(digits[3:5]),
+            int(digits[5:7]),
+        )
+    except ValueError:
+        return False
+    return (
+        birth_date <= date.today()
+        and digits[7:9] in _EGYPTIAN_NATIONAL_ID_GOVERNORATE_CODES
+    )
+
+
+def validate_moroccan_cin(text: str) -> bool:
+    """Validate the public letter-prefix and serial shape of a Moroccan CIN."""
+
+    if not isinstance(text, str):
+        return False
+    compact = text.strip().replace(" ", "").upper()
+    prefix = re.match(r"^[A-Z]{1,2}", compact)
+    if prefix is None:
+        return False
+    serial = _ascii_decimal_digits(compact[prefix.end() :])
+    return serial is not None and 5 <= len(serial) <= 6
+
+
+_LOCALE_FORMAT_VALIDATORS = {
+    "egyptian_national_id": validate_egyptian_national_id,
+    "moroccan_cin": validate_moroccan_cin,
+}
+
+
+def _pii_pattern_from_locale_format(spec: LocalePIIFormat) -> PIIPattern:
+    validator = None
+    if spec.validator is not None:
+        try:
+            validator = _LOCALE_FORMAT_VALIDATORS[spec.validator]
+        except KeyError as exc:  # pragma: no cover - import-time data invariant
+            raise RuntimeError(
+                f"unknown locale PII validator {spec.validator!r}"
+            ) from exc
+    return PIIPattern(
+        spec.pattern,
+        spec.entity_type,
+        priority=spec.priority,
+        flags=spec.flags,
+        base_score=spec.base_score,
+        context_words=list(spec.context_words),
+        context_boost=spec.context_boost,
+        validator=validator,
+        safety_sweep_requires_context=spec.safety_sweep_requires_context,
+    )
+
 
 _UK_ENGLISH_PII_PATTERNS: List[PIIPattern] = [
     # UK NHS Number (10 digits, optional 3-3-4 spacing, Modulus 11 check).
@@ -5136,6 +5248,10 @@ LOCALE_PII_PATTERNS: Dict[str, List[PIIPattern]] = {
     "en_au": _AU_ENGLISH_PII_PATTERNS,
     "en_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
     "fr_ca": _CANADIAN_ENGLISH_PII_PATTERNS,
+    **{
+        locale: [_pii_pattern_from_locale_format(spec) for spec in formats]
+        for locale, formats in LOCALE_PII_FORMATS.items()
+    },
 }
 
 
