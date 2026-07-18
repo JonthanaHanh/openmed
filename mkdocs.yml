@@ -207,5 +207,6 @@ watch:
   - openmed/zero_shot
 
 exclude_docs: |
+  demo/web/README.md
   website/**
   brand/**
