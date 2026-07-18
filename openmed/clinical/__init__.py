@@ -144,6 +144,7 @@ from .problem_list import (
     SpanOffset,
     clinical_status_from_assertion,
     deduplicate_problem_list,
+    problem_mentions_from_grounded_terms,
 )
 from .relations import (
     MEDICATION_LINK_ADVISORY,
@@ -366,6 +367,7 @@ __all__ = [
     "SpanOffset",
     "clinical_status_from_assertion",
     "deduplicate_problem_list",
+    "problem_mentions_from_grounded_terms",
     "FrequencyNormalization",
     "DurationNormalization",
     "MEDICATION_SIG_ADVISORY",
