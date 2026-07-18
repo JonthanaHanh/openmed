@@ -10,7 +10,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from examples import clinical_ner_families, gradio_deid_app
+from examples import (
+    clinical_ner_families,
+    deid_chinese_clinical_note,
+    deid_hindi_hinglish_note,
+    gradio_deid_app,
+)
 
 
 def test_clinical_ner_families_example_is_syntactically_valid():
@@ -160,3 +165,158 @@ def test_gradio_deid_app_missing_gradio_prints_hint(monkeypatch):
         gradio_deid_app.build_demo()
 
     assert "pip install gradio" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "example_path",
+    [
+        Path("examples/deid_chinese_clinical_note.py"),
+        Path("examples/deid_hindi_hinglish_note.py"),
+    ],
+)
+def test_chinese_hindi_deid_examples_are_syntactically_valid(example_path):
+    ast.parse(example_path.read_text(encoding="utf-8"))
+
+
+def test_chinese_deid_recognizer_covers_every_synthetic_identifier():
+    from openmed.core.custom_recognizer import CustomRecognizer
+
+    recognizer = CustomRecognizer.from_config(
+        deid_chinese_clinical_note.CHINESE_CUSTOM_RECOGNIZER
+    )
+
+    detected = {
+        entity.text
+        for entity in recognizer.detect_entities(
+            deid_chinese_clinical_note.SYNTHETIC_CHINESE_NOTE
+        )
+    }
+
+    assert detected == set(deid_chinese_clinical_note.SYNTHETIC_IDENTIFIERS)
+
+
+def test_chinese_deid_example_runs_without_network(tmp_path, monkeypatch):
+    from openmed.core import pii
+    from openmed.processing.outputs import PredictionResult
+
+    calls = []
+
+    def fake_extract_pii(text, model_name, *args, **kwargs):
+        assert os.environ["HF_HUB_OFFLINE"] == "1"
+        assert os.environ["TRANSFORMERS_OFFLINE"] == "1"
+        calls.append((text, model_name, kwargs["lang"]))
+        return PredictionResult(
+            text=text,
+            entities=[],
+            model_name=model_name,
+            timestamp="2026-01-01T00:00:00",
+        )
+
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
+    monkeypatch.setattr(pii, "extract_pii", fake_extract_pii)
+    output_path = tmp_path / "zh" / "redacted.txt"
+
+    result = deid_chinese_clinical_note.run_chinese_deidentification(output_path)
+
+    assert calls == [
+        (
+            deid_chinese_clinical_note.SYNTHETIC_CHINESE_NOTE,
+            deid_chinese_clinical_note.MODEL_ID,
+            "en",
+        )
+    ]
+    deid_chinese_clinical_note.assert_synthetic_identifiers_removed(
+        result.deidentified_text
+    )
+    assert output_path.read_text(encoding="utf-8") == result.deidentified_text + "\n"
+    rows = deid_chinese_clinical_note.structured_entities(result)
+    assert {row["text"] for row in rows} == set(
+        deid_chinese_clinical_note.SYNTHETIC_IDENTIFIERS
+    )
+
+
+def test_chinese_deid_example_fails_closed_on_synthetic_leak():
+    with pytest.raises(AssertionError, match="not redacted"):
+        deid_chinese_clinical_note.assert_synthetic_identifiers_removed(
+            deid_chinese_clinical_note.SYNTHETIC_CHINESE_NOTE
+        )
+
+
+@pytest.mark.parametrize(
+    ("note_name", "note"),
+    list(deid_hindi_hinglish_note.NOTES.items()),
+)
+def test_hindi_hinglish_recognizer_covers_every_synthetic_identifier(
+    note_name,
+    note,
+):
+    from openmed.core.custom_recognizer import CustomRecognizer
+
+    recognizer = CustomRecognizer.from_config(
+        deid_hindi_hinglish_note.INDIA_CUSTOM_RECOGNIZER
+    )
+
+    detected = {entity.text for entity in recognizer.detect_entities(note)}
+
+    assert detected == set(
+        deid_hindi_hinglish_note.SYNTHETIC_IDENTIFIERS_BY_NOTE[note_name]
+    )
+
+
+def test_hindi_hinglish_deid_example_runs_without_network(tmp_path, monkeypatch):
+    from openmed.core import pii
+    from openmed.processing.outputs import PredictionResult
+
+    calls = []
+
+    def fake_extract_pii(text, model_name, *args, **kwargs):
+        assert os.environ["HF_HUB_OFFLINE"] == "1"
+        assert os.environ["TRANSFORMERS_OFFLINE"] == "1"
+        calls.append((text, model_name, kwargs["lang"]))
+        return PredictionResult(
+            text=text,
+            entities=[],
+            model_name=model_name,
+            timestamp="2026-01-01T00:00:00",
+        )
+
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
+    monkeypatch.setattr(pii, "extract_pii", fake_extract_pii)
+    output_dir = tmp_path / "hi"
+
+    results = deid_hindi_hinglish_note.run_hindi_hinglish_deidentification(output_dir)
+
+    assert calls == [
+        (
+            note,
+            deid_hindi_hinglish_note.HINDI_MODEL_ID,
+            "hi",
+        )
+        for note in deid_hindi_hinglish_note.NOTES.values()
+    ]
+    assert set(results) == set(deid_hindi_hinglish_note.NOTES)
+    for note_name, result in results.items():
+        deid_hindi_hinglish_note.assert_synthetic_identifiers_removed(
+            note_name,
+            result.deidentified_text,
+        )
+        saved = output_dir / f"{note_name}_note_redacted.txt"
+        assert saved.read_text(encoding="utf-8") == result.deidentified_text + "\n"
+        assert deid_hindi_hinglish_note.structured_entities(result)
+
+
+@pytest.mark.parametrize(
+    ("note_name", "note"),
+    list(deid_hindi_hinglish_note.NOTES.items()),
+)
+def test_hindi_hinglish_deid_example_fails_closed_on_synthetic_leak(
+    note_name,
+    note,
+):
+    with pytest.raises(AssertionError, match="survived"):
+        deid_hindi_hinglish_note.assert_synthetic_identifiers_removed(
+            note_name,
+            note,
+        )
