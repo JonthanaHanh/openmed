@@ -29,7 +29,7 @@ SUPPORTED_SCRIPTS = (
 )
 
 SCRIPT_LANGUAGE_HINTS: dict[str, tuple[str, ...]] = {
-    "Latin": ("en", "fr", "de", "it", "es", "nl", "pt", "tr"),
+    "Latin": ("en", "fr", "de", "it", "es", "nl", "pt", "tr", "yo"),
     "Arabic": ("ar",),
     "Han": ("ja",),
     "Hiragana/Katakana": ("ja",),
@@ -124,7 +124,7 @@ class DetectionNormalization:
         )
 
     def remap_span(self, start: int, end: int) -> tuple[int, int]:
-        """Map normalized-text offsets back to original-text offsets."""
+        """Map normalized offsets to whole original base-plus-mark clusters."""
         safe_start = max(0, min(int(start), len(self.text)))
         safe_end = max(safe_start, min(int(end), len(self.text)))
         if not self.offset_starts:
@@ -368,6 +368,7 @@ def normalize_for_pii_detection(
         )
         if width_char != folded_char
     }
+    cluster_starts, cluster_ends = _base_mark_cluster_maps(text)
 
     for index, char in enumerate(digit_folding.text):
         original_start, original_end = width_normalization.char_origins[index]
@@ -383,8 +384,8 @@ def normalize_for_pii_detection(
             changed_source_indices.add(original_start)
         for replacement_char in replacement:
             output.append(replacement_char)
-            starts.append(original_start)
-            ends.append(original_end)
+            starts.append(cluster_starts[original_start])
+            ends.append(cluster_ends[original_end - 1])
 
     return DetectionNormalization(
         text="".join(output),
@@ -398,6 +399,55 @@ def normalize_for_pii_detection(
         scripts=scripts,
         mixed_script=len(scripts) > 1,
     )
+
+
+def snap_span_to_grapheme_boundaries(
+    text: str,
+    start: int,
+    end: int,
+) -> tuple[int, int]:
+    """Expand a non-empty span to whole base-plus-combining-mark clusters.
+
+    This deliberately targets the Unicode boundary OpenMed must preserve for
+    de-identification: a base code point followed by one or more characters in
+    a Unicode mark category. It prevents replacements from leaving a Yoruba
+    tone or dot-below mark orphaned in the output without adding a dependency
+    on a full text-segmentation library.
+    """
+
+    safe_start = max(0, min(int(start), len(text)))
+    safe_end = max(safe_start, min(int(end), len(text)))
+    if safe_start == safe_end:
+        return safe_start, safe_end
+
+    while safe_start > 0 and _is_combining_mark(text[safe_start]):
+        safe_start -= 1
+    while safe_end < len(text) and _is_combining_mark(text[safe_end]):
+        safe_end += 1
+    return safe_start, safe_end
+
+
+def _base_mark_cluster_maps(text: str) -> tuple[list[int], list[int]]:
+    """Return the containing base-plus-mark cluster bounds for each code point."""
+
+    starts = [0] * len(text)
+    ends = [0] * len(text)
+    cluster_start = 0
+
+    for index, char in enumerate(text):
+        if index > 0 and not _is_combining_mark(char):
+            for cluster_index in range(cluster_start, index):
+                ends[cluster_index] = index
+            cluster_start = index
+        starts[index] = cluster_start
+
+    for cluster_index in range(cluster_start, len(text)):
+        ends[cluster_index] = len(text)
+    return starts, ends
+
+
+def _is_combining_mark(char: str) -> bool:
+    return unicodedata.category(char).startswith("M")
 
 
 def _script_for_char(char: str) -> str | None:
@@ -443,5 +493,6 @@ __all__ = [
     "candidate_languages_for_script",
     "detect_script",
     "normalize_for_pii_detection",
+    "snap_span_to_grapheme_boundaries",
     "segment_by_script",
 ]

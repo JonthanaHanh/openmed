@@ -241,6 +241,7 @@ BACKLOG_LOCALES: Final = frozenset(
         "tl",
         "uk",
         "vi",
+        "yo",
         "zh",
     }
 )
@@ -286,6 +287,7 @@ LOCALE_DATE_ORDER: Final[Mapping[str, DateOrder]] = {
     "et": "dmy",
     "uk": "dmy",
     "vi": "dmy",
+    "yo": "dmy",
     "zh": "ymd",
 }
 
@@ -342,6 +344,7 @@ LOCALE_NUMBER_SEP: Final[Mapping[str, NumberSeparators]] = {
     "et": _COMMA_DECIMAL_SPACE_GROUPS,
     "uk": _COMMA_DECIMAL_SPACE_GROUPS,
     "vi": _COMMA_DECIMAL_DOT_GROUPS,
+    "yo": _DOT_DECIMAL_COMMA_GROUPS,
     "zh": _DOT_DECIMAL_COMMA_GROUPS,
 }
 
