@@ -1,4 +1,4 @@
-"""Tests for canonical device-tier budgets and compliance caveats."""
+"""Tests for canonical device-tier budgets and compliance documentation."""
 
 from __future__ import annotations
 
@@ -96,3 +96,55 @@ def test_compliance_doc_covers_frameworks_and_evidence_links() -> None:
         "Residual re-identification risk",
     ):
         assert expected in text
+
+
+def test_compliance_templates_cover_required_legal_review_fields() -> None:
+    compliance_dir = ROOT / "docs" / "compliance"
+    dpia = (compliance_dir / "dpia-template.md").read_text(encoding="utf-8")
+    dpa = (compliance_dir / "dpa-template.md").read_text(encoding="utf-8")
+    model_card = (compliance_dir / "model-card-eu-ai-act-fields.md").read_text(
+        encoding="utf-8"
+    )
+
+    for artifact in (dpia, dpa, model_card):
+        assert "Template — requires legal review. Not legal advice." in artifact
+
+    for expected in (
+        "`hipaa_safe_harbor`",
+        "`gdpr_pseudonymization`",
+        "AuditReport.residual_risk.risk_report_record_score",
+        "BenchmarkReport.metrics",
+    ):
+        assert expected in dpia
+
+    for expected in (
+        "on-device",
+        "no telemetry by default",
+        "Sub-processors: none",
+        "Reversible Pseudonymization and Key Custody",
+        "`gdpr_pseudonymization`",
+    ):
+        assert expected in dpa
+
+    for expected in (
+        "## EU AI Act / GDPR Compliance Fields",
+        "### Intended purpose",
+        "### Known limitations and reasonably foreseeable misuse",
+        "### Accuracy and leakage metrics",
+        "### Human oversight",
+        "### Robustness, cybersecurity, and monitoring evidence",
+        "`models.jsonl`",
+        "`BenchmarkReport`",
+    ):
+        assert expected in model_card
+
+
+def test_compliance_posture_links_deployment_templates() -> None:
+    text = (ROOT / "docs" / "compliance.md").read_text(encoding="utf-8")
+
+    for link in (
+        "compliance/dpia-template.md",
+        "compliance/dpa-template.md",
+        "compliance/model-card-eu-ai-act-fields.md",
+    ):
+        assert link in text
