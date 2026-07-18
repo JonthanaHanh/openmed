@@ -118,6 +118,7 @@ class TestConstants:
             "cs",
             "el",
             "vi",
+            "ha",
         }
 
     def test_language_names_keys(self):

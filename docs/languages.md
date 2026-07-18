@@ -59,6 +59,12 @@ validator-backed national-ID coverage
 (`openmed.core.pii_i18n.NATIONAL_ID_ONLY_LANGUAGES`); see
 [PII Anonymization](anonymization.md#clinical-id-checksums) for the ID providers.
 
+Hausa (`ha`) is available through that deterministic pattern-pack path with a
+native `ha_NG` surrogate locale. Boko context cues cover dates, ages, Nigerian
+NINs, and Nigerian/Nigerien phones. Ajami coverage is intentionally limited to
+numeric patterns—phones, NINs, and dates written with Western or Arabic-Indic
+digits—and does not claim Ajami lexical recognition or transliteration.
+
 ## Worked examples
 
 Each example de-identifies synthetic, non-PHI text with `method="mask"`. The
