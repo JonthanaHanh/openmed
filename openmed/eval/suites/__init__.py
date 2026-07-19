@@ -36,6 +36,12 @@ from openmed.eval.datasets.multilingual_ner import (
 )
 from openmed.eval.golden import load_benchmark_fixtures
 from openmed.eval.harness import BenchmarkFixture
+from openmed.eval.suites.indic_encoder import (
+    INDIC_ENCODER_RECALL_DELTA,
+    IndicRecallDeltaReport,
+    SyntheticIndicFixture,
+    run_indic_encoder_recall_delta,
+)
 from openmed.eval.suites.multimodal_dicom import (
     MULTIMODAL_DICOM,
     generate_synthetic_dicom_corpus,
@@ -148,6 +154,7 @@ __all__ = [
     "BIOMEDICAL_NER",
     "MULTILINGUAL_NER",
     "MULTIMODAL_DICOM",
+    "INDIC_ENCODER_RECALL_DELTA",
     "RELATIONS",
     "RelationFixture",
     "RelationTrap",
@@ -155,12 +162,15 @@ __all__ = [
     "ComparatorMatrixReport",
     "ComparatorMatrixRow",
     "ComparatorUnavailable",
+    "IndicRecallDeltaReport",
+    "SyntheticIndicFixture",
     "DEFAULT_SUITES",
     "validate_suite_name",
     "load_benchmark_fixtures",
     "load_suite_fixtures",
     "suite_metadata",
     "run_comparator_matrix",
+    "run_indic_encoder_recall_delta",
     "load_i2b2_deid",
     "i2b2_suite_metadata",
     "biomedical_ner_suite_metadata",

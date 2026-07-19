@@ -74,7 +74,14 @@ from .i2b2 import (
     load_i2b2_deid,
     map_i2b2_phi_tag,
 )
-from .licenses import PUBLIC_DATASET_LICENSES, DatasetLicense, license_for
+from .licenses import (
+    PERMISSIVE_ENCODER_LICENSES,
+    PUBLIC_DATASET_LICENSES,
+    DatasetLicense,
+    EncoderLicense,
+    encoder_license_for,
+    license_for,
+)
 from .multilingual_ner import (
     CANTEMIST,
     CMEEE,
@@ -122,6 +129,7 @@ __all__ = [
     "DUACorpusStub",
     "DUACredentialRequired",
     "DatasetLicense",
+    "EncoderLicense",
     "DatasetLoadResult",
     "DatasetUnavailable",
     "DRUGPROT",
@@ -167,6 +175,7 @@ __all__ = [
     "MultilingualNerSpan",
     "PUBLIC_DATASETS",
     "PUBLIC_DATASET_LICENSES",
+    "PERMISSIVE_ENCODER_LICENSES",
     "PUBLIC_LABEL_MAPS",
     "PublicDatasetAdapter",
     "PublicDatasetRecord",
@@ -182,6 +191,7 @@ __all__ = [
     "clinical_phi_manifest_hash",
     "i2b2_suite_metadata",
     "license_for",
+    "encoder_license_for",
     "load_clinical_phi_manifest",
     "load_biomedical_ner_corpus",
     "load_biomedical_ner_fixtures",
