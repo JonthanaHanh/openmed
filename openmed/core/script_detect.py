@@ -11,6 +11,10 @@ from __future__ import annotations
 import unicodedata
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..processing.legacy_encoding import LegacyFontMap
 
 UNKNOWN_SCRIPT = "Unknown"
 
@@ -110,6 +114,8 @@ class DetectionNormalization:
     stripped_combining_marks: int = 0
     folded_confusables: int = 0
     folded_native_digits: int = 0
+    converted_legacy_bytes: int = 0
+    legacy_encoding: str = "unicode"
     scripts: tuple[str, ...] = ()
     mixed_script: bool = False
 
@@ -121,6 +127,7 @@ class DetectionNormalization:
             or self.stripped_combining_marks > 0
             or self.folded_confusables > 0
             or self.folded_native_digits > 0
+            or self.converted_legacy_bytes > 0
         )
 
     def remap_span(self, start: int, end: int) -> tuple[int, int]:
@@ -145,8 +152,10 @@ class DetectionNormalization:
         """Return PHI-free normalization metadata."""
         return {
             "changed": self.changed,
+            "converted_legacy_bytes": self.converted_legacy_bytes,
             "folded_confusables": self.folded_confusables,
             "folded_native_digits": self.folded_native_digits,
+            "legacy_encoding": self.legacy_encoding,
             "mixed_script": self.mixed_script,
             "removed_zero_width": self.removed_zero_width,
             "scripts": list(self.scripts),
@@ -323,58 +332,91 @@ def normalize_for_pii_detection(
     text: str,
     *,
     width_convention: str = "cjk",
+    legacy_font_map: LegacyFontMap | None = None,
 ) -> DetectionNormalization:
     """Fold adversarial Unicode artifacts while preserving offset remapping.
 
     The defense strips zero-width controls and standalone combining marks, folds
-    common Latin-lookalike Greek/Cyrillic/full-width characters, folds Indic
-    decimal digits for ASCII validators, and records a script-consistency
-    summary without storing source text. ``width_convention`` selects the
-    CJK-safe width fold or strict per-character NFKC normalization.
+    common Latin-lookalike Greek/Cyrillic/full-width characters, converts
+    likely ISCII or caller-mapped legacy-font runs, folds Indic decimal digits
+    for ASCII validators, and records a script-consistency summary without
+    storing source text. ``width_convention`` selects the CJK-safe width fold
+    or strict per-character NFKC normalization.
     """
 
     # Keep the reusable width-normalization API in ``processing`` while
     # composing its explicit source map with this existing detection defense.
     # The local import avoids making the lightweight script helpers import the
     # broader processing package during module initialization.
+    from ..processing.legacy_encoding import convert_legacy_encoding
     from ..processing.text import fold_indic_digits
     from ..processing.zh_normalize import normalize_width
 
-    scripts = tuple(sorted(_script_counts(text)))
-    width_normalization = normalize_width(text, convention=width_convention)
+    legacy_conversion = convert_legacy_encoding(
+        text,
+        legacy_font_map=legacy_font_map,
+    )
+    legacy_text = legacy_conversion.text
+    if legacy_conversion.encoding == "unicode":
+        legacy_origins = tuple((index, index + 1) for index in range(len(text)))
+    else:
+        # Latin-1 surrogate strings preserve one source byte per code point.
+        legacy_origins = legacy_conversion.offset_map.converted_to_original_spans
+
+    scripts = tuple(sorted(_script_counts(legacy_text)))
+    width_normalization = normalize_width(legacy_text, convention=width_convention)
     digit_folding = fold_indic_digits(width_normalization.text)
     output: list[str] = []
     starts: list[int] = []
     ends: list[int] = []
     removed_zero_width = 0
     stripped_combining_marks = 0
-    normalized_by_source: list[list[str]] = [[] for _ in text]
-    for char, (original_start, _original_end) in zip(
+    normalized_by_legacy_source: list[list[str]] = [[] for _ in legacy_text]
+    for char, (legacy_start, _legacy_end) in zip(
         width_normalization.text,
         width_normalization.char_origins,
     ):
-        normalized_by_source[original_start].append(char)
+        normalized_by_legacy_source[legacy_start].append(char)
     changed_source_indices = {
-        index
+        _source_span_for_legacy_range(legacy_origins, index, index + 1)[0]
         for index, (char, normalized_chars) in enumerate(
-            zip(text, normalized_by_source)
+            zip(legacy_text, normalized_by_legacy_source)
         )
         if "".join(normalized_chars) != char
     }
     folded_native_digit_sources = {
-        width_normalization.char_origins[index][0]
+        _source_span_for_legacy_range(
+            legacy_origins,
+            *width_normalization.char_origins[index],
+        )[0]
         for index, (width_char, folded_char) in enumerate(
             zip(width_normalization.text, digit_folding.text)
         )
         if width_char != folded_char
     }
+    converted_legacy_sources: set[int] = set()
+    if legacy_conversion.encoding != "unicode":
+        converted_by_span: dict[tuple[int, int], list[str]] = {}
+        for char, span in zip(legacy_text, legacy_origins):
+            converted_by_span.setdefault(span, []).append(char)
+        for (start, end), converted_chars in converted_by_span.items():
+            if text[start:end] != "".join(converted_chars):
+                converted_legacy_sources.update(range(start, end))
 
     for index, char in enumerate(digit_folding.text):
-        original_start, original_end = width_normalization.char_origins[index]
+        legacy_start, legacy_end = width_normalization.char_origins[index]
+        original_start, original_end = _source_span_for_legacy_range(
+            legacy_origins,
+            legacy_start,
+            legacy_end,
+        )
         if char in ZERO_WIDTH_CHARS:
             removed_zero_width += 1
             continue
-        if unicodedata.category(char) == "Mn":
+        if unicodedata.category(char) == "Mn" and not _is_attached_indic_mark(
+            digit_folding.text,
+            index,
+        ):
             stripped_combining_marks += 1
             continue
 
@@ -395,6 +437,8 @@ def normalize_for_pii_detection(
         stripped_combining_marks=stripped_combining_marks,
         folded_confusables=len(changed_source_indices),
         folded_native_digits=len(folded_native_digit_sources),
+        converted_legacy_bytes=len(converted_legacy_sources),
+        legacy_encoding=legacy_conversion.encoding,
         scripts=scripts,
         mixed_script=len(scripts) > 1,
     )
@@ -410,6 +454,52 @@ def _script_for_char(char: str) -> str | None:
         if any(start <= codepoint <= end for start, end in ranges):
             return script
     return None
+
+
+def _source_span_for_legacy_range(
+    origins: tuple[tuple[int, int], ...],
+    start: int,
+    end: int,
+) -> tuple[int, int]:
+    spans = origins[start:end]
+    if spans:
+        return min(span[0] for span in spans), max(span[1] for span in spans)
+    if start < len(origins):
+        anchor = origins[start][0]
+    elif origins:
+        anchor = origins[-1][1]
+    else:
+        anchor = 0
+    return anchor, anchor
+
+
+def _is_attached_indic_mark(text: str, index: int) -> bool:
+    char = text[index]
+    if not _is_indic_codepoint(char) or index == 0:
+        return False
+    previous = text[index - 1]
+    return _is_indic_codepoint(previous) and unicodedata.category(previous)[0] in {
+        "L",
+        "M",
+    }
+
+
+def _is_indic_codepoint(char: str) -> bool:
+    codepoint = ord(char)
+    return any(
+        start <= codepoint <= end
+        for start, end in (
+            (0x0900, 0x097F),
+            (0x0980, 0x09FF),
+            (0x0A00, 0x0A7F),
+            (0x0A80, 0x0AFF),
+            (0x0B00, 0x0B7F),
+            (0x0B80, 0x0BFF),
+            (0x0C00, 0x0C7F),
+            (0x0C80, 0x0CFF),
+            (0x0D00, 0x0D7F),
+        )
+    )
 
 
 def _script_counts(text: str) -> dict[str, int]:

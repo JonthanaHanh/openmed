@@ -50,6 +50,16 @@ from .kafka_connector import (
     deidentify_stream,
     replay,
 )
+from .legacy_encoding import (
+    ISCII_MAPPING_PROVENANCE,
+    ConversionOffsetMap,
+    LegacyConversion,
+    LegacyFontMap,
+    convert_legacy_encoding,
+    detect_legacy_encoding,
+    iscii_to_unicode,
+    unicode_to_iscii,
+)
 from .object_storage import (
     ObjectProgressCallback,
     ObjectStorageBatchResult,
@@ -58,7 +68,13 @@ from .object_storage import (
 )
 from .outputs import OutputFormatter, format_predictions
 from .pulsar_connector import PulsarClientPair, create_pulsar_clients
-from .text import TextProcessor, postprocess_text, preprocess_text
+from .text import (
+    IndicNormalization,
+    TextProcessor,
+    normalize_indic_text,
+    postprocess_text,
+    preprocess_text,
+)
 from .tokenization import TokenizationHelper, infer_tokenizer_max_length
 from .tokenizer_cache import clear_tokenizer_cache, get_tokenizer
 
@@ -66,6 +82,16 @@ __all__ = [
     "TextProcessor",
     "preprocess_text",
     "postprocess_text",
+    "IndicNormalization",
+    "normalize_indic_text",
+    "ConversionOffsetMap",
+    "ISCII_MAPPING_PROVENANCE",
+    "LegacyConversion",
+    "LegacyFontMap",
+    "convert_legacy_encoding",
+    "detect_legacy_encoding",
+    "iscii_to_unicode",
+    "unicode_to_iscii",
     "TokenizationHelper",
     "infer_tokenizer_max_length",
     "get_tokenizer",

@@ -40,6 +40,7 @@ nav:
       - Configuration & Validation: configuration.md
       - Configuration Profiles: profiles.md
       - Batch Processing: batch-processing.md
+      - Legacy Indic Encoding: legacy-indic-encoding.md
       - Performance Profiling: profiling.md
       - Zero-shot NER How-to: zero-shot-howto.md
       - Zero-shot Toolkit: zero-shot-ner.md

@@ -2,11 +2,182 @@
 
 import logging
 import re
+import unicodedata
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Indic logical-order and NFC normalization
+# ---------------------------------------------------------------------------
+
+_DEVANAGARI_PREBASE_I = "\u093f"
+_DEVANAGARI_NUKTA = "\u093c"
+_DEVANAGARI_VIRAMA = "\u094d"
+_INDIC_JOIN_CONTROLS = frozenset({"\u200c", "\u200d"})
+
+
+@dataclass(frozen=True)
+class IndicNormalization:
+    """Logically ordered NFC text with a source alignment.
+
+    ``char_origins[i]`` identifies the half-open source span that produced
+    normalized character ``i``. The source units are code points by default,
+    but callers such as the legacy-encoding converter may provide byte spans.
+    """
+
+    text: str
+    char_origins: tuple[tuple[int, int], ...]
+
+    def to_original_span(self, start: int, end: int) -> tuple[int, int]:
+        """Map a normalized span to the supplied source coordinate system."""
+
+        if not (0 <= start <= end <= len(self.text)):
+            raise ValueError("span must satisfy 0 <= start <= end <= len(text)")
+        if start == end:
+            if start < len(self.char_origins):
+                anchor = self.char_origins[start][0]
+            elif self.char_origins:
+                anchor = self.char_origins[-1][1]
+            else:
+                anchor = 0
+            return anchor, anchor
+        spans = self.char_origins[start:end]
+        return min(span[0] for span in spans), max(span[1] for span in spans)
+
+
+def normalize_indic_text(
+    text: str,
+    *,
+    char_origins: tuple[tuple[int, int], ...] | None = None,
+) -> IndicNormalization:
+    """Normalize legacy Devanagari ordering and return stable NFC text.
+
+    ISCII itself stores dependent matras in logical order, but visual-order
+    legacy fonts often place vowel sign I before a consonant cluster. This
+    function moves that pre-base glyph token after its logical cluster, puts a
+    nukta before a following virama, expands canonically decomposed Devanagari
+    letters, and produces NFC. Join controls following virama are retained.
+
+    Args:
+        text: Unicode text to normalize.
+        char_origins: Optional source span for each input character.
+
+    Returns:
+        Idempotent normalized text and its source alignment.
+    """
+
+    if char_origins is None:
+        char_origins = tuple((index, index + 1) for index in range(len(text)))
+    if len(char_origins) != len(text):
+        raise ValueError("char_origins must contain one span per input character")
+
+    units: list[tuple[str, tuple[int, int]]] = []
+    for char, origin in zip(text, char_origins):
+        # Several Devanagari compatibility letters have canonical
+        # decompositions that NFC intentionally retains. Expanding each unit
+        # first makes nukta/virama ordering explicit and deterministic.
+        for normalized_char in unicodedata.normalize("NFC", char):
+            units.append((normalized_char, origin))
+
+    reordered: list[tuple[str, tuple[int, int]]] = []
+    index = 0
+    while index < len(units):
+        char = units[index][0]
+        if (
+            char == _DEVANAGARI_PREBASE_I
+            and index + 1 < len(units)
+            and _is_devanagari_consonant(units[index + 1][0])
+        ):
+            cluster_end = _devanagari_cluster_end(units, index + 1)
+            reordered.extend(units[index + 1 : cluster_end])
+            reordered.append(units[index])
+            index = cluster_end
+            continue
+        reordered.append(units[index])
+        index += 1
+
+    # Unicode canonical ordering requires nukta (CCC 7) before virama (CCC 9).
+    # Do the swap explicitly so malformed legacy sequences become valid input
+    # even on runtimes whose normalization data predates a character.
+    index = 1
+    while index < len(reordered):
+        if (
+            reordered[index][0] == _DEVANAGARI_NUKTA
+            and reordered[index - 1][0] == _DEVANAGARI_VIRAMA
+        ):
+            reordered[index - 1], reordered[index] = (
+                reordered[index],
+                reordered[index - 1],
+            )
+        index += 1
+
+    normalized_units = _normalize_unit_groups(reordered)
+    return IndicNormalization(
+        text="".join(char for char, _ in normalized_units),
+        char_origins=tuple(origin for _, origin in normalized_units),
+    )
+
+
+def _is_devanagari_consonant(char: str) -> bool:
+    codepoint = ord(char)
+    return 0x0915 <= codepoint <= 0x0939 or 0x0978 <= codepoint <= 0x097F
+
+
+def _devanagari_cluster_end(
+    units: list[tuple[str, tuple[int, int]]],
+    start: int,
+) -> int:
+    index = start + 1
+    if index < len(units) and units[index][0] == _DEVANAGARI_NUKTA:
+        index += 1
+    while index < len(units) and units[index][0] == _DEVANAGARI_VIRAMA:
+        index += 1
+        if index < len(units) and units[index][0] in _INDIC_JOIN_CONTROLS:
+            index += 1
+        if index >= len(units) or not _is_devanagari_consonant(units[index][0]):
+            break
+        index += 1
+        if index < len(units) and units[index][0] == _DEVANAGARI_NUKTA:
+            index += 1
+    return index
+
+
+def _normalize_unit_groups(
+    units: list[tuple[str, tuple[int, int]]],
+) -> list[tuple[str, tuple[int, int]]]:
+    normalized: list[tuple[str, tuple[int, int]]] = []
+    group: list[tuple[str, tuple[int, int]]] = []
+
+    def flush() -> None:
+        if not group:
+            return
+        source_text = "".join(char for char, _ in group)
+        nfc_text = unicodedata.normalize("NFC", source_text)
+        if nfc_text == source_text:
+            normalized.extend(group)
+        else:
+            combined = (
+                min(origin[0] for _, origin in group),
+                max(origin[1] for _, origin in group),
+            )
+            normalized.extend((char, combined) for char in nfc_text)
+        group.clear()
+
+    for unit in units:
+        char = unit[0]
+        if (
+            group
+            and unicodedata.combining(char) == 0
+            and char not in _INDIC_JOIN_CONTROLS
+        ):
+            flush()
+        group.append(unit)
+    flush()
+    return normalized
 
 
 class TextProcessor:
