@@ -18,9 +18,11 @@ from openmed.core.anonymizer.providers import clinical_ids
 from openmed.core.pii_i18n import (
     SUPPORTED_LANGUAGES,
     validate_aadhaar,
+    validate_czech_rodne_cislo,
     validate_dutch_bsn,
     validate_french_nir,
     validate_german_steuer_id,
+    validate_greek_amka,
     validate_indonesian_nik,
     validate_israeli_teudat_zehut,
     validate_italian_codice_fiscale,
@@ -30,6 +32,7 @@ from openmed.core.pii_i18n import (
     validate_spanish_nie,
     validate_thai_national_id,
     validate_turkish_tckn,
+    validate_ukrainian_rnokpp,
 )
 
 SUPPORTED_LOCALE_PHI_LANGUAGES: Final[tuple[str, ...]] = (
@@ -50,6 +53,9 @@ SUPPORTED_LOCALE_PHI_LANGUAGES: Final[tuple[str, ...]] = (
     "th",
     "ko",
     "ro",
+    "uk",
+    "cs",
+    "el",
 )
 
 LOCALE_PHI_LABELS: Final[tuple[str, ...]] = (
@@ -236,6 +242,33 @@ _TEMPLATES: Final[Mapping[str, tuple[str, ...]]] = {
         ". Control la ",
         ".",
     ),
+    "uk": (
+        "Клінічна нотатка: пацієнт ",
+        " народився ",
+        ". РНОКПП пацієнта ",
+        ". Телефон ",
+        ". Адреса ",
+        ". Дата наступного огляду ",
+        ".",
+    ),
+    "cs": (
+        "Klinická poznámka: pacient ",
+        " se narodil ",
+        ". Rodné číslo pacienta ",
+        ". Telefon ",
+        ". Adresa ",
+        ". Datum kontroly ",
+        ".",
+    ),
+    "el": (
+        "Κλινική σημείωση: ασθενής ",
+        " γεννήθηκε στις ",
+        ". ΑΜΚΑ ασθενούς ",
+        ". Τηλέφωνο ",
+        ". Διεύθυνση ",
+        ". Ημερομηνία επανελέγχου ",
+        ".",
+    ),
 }
 
 _NATIONAL_ID_VALIDATORS: Final[Mapping[str, Callable[[str], bool]]] = {
@@ -254,6 +287,9 @@ _NATIONAL_ID_VALIDATORS: Final[Mapping[str, Callable[[str], bool]]] = {
     "th": validate_thai_national_id,
     "ko": validate_korean_rrn,
     "ro": validate_romanian_cnp,
+    "uk": validate_ukrainian_rnokpp,
+    "cs": validate_czech_rodne_cislo,
+    "el": validate_greek_amka,
 }
 
 _NATIONAL_ID_VALIDATOR_NAMES: Final[Mapping[str, str]] = {
@@ -272,6 +308,9 @@ _NATIONAL_ID_VALIDATOR_NAMES: Final[Mapping[str, str]] = {
     "th": "pii_i18n.validate_thai_national_id",
     "ko": "pii_i18n.validate_korean_rrn",
     "ro": "pii_i18n.validate_romanian_cnp",
+    "uk": "pii_i18n.validate_ukrainian_rnokpp",
+    "cs": "pii_i18n.validate_czech_rodne_cislo",
+    "el": "pii_i18n.validate_greek_amka",
 }
 
 

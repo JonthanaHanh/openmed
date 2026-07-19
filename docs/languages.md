@@ -36,7 +36,9 @@ locale resolution, determinism, and cross-document surrogate vaults, see
 | Code   | Language   | Default PII model                                          | Faker locale | Notes                                                        |
 | ------ | ---------- | ---------------------------------------------------------- | ------------ | ----------------------------------------------------------- |
 | `ar`   | Arabic     | `OpenMed/OpenMed-PII-Arabic-SnowflakeMed-Large-568M-v1`    | `ar_EG`      | Egypt is the most-populous Arabic locale; override per call. |
+| `cs`   | Czech      | `OpenMed/privacy-filter-multilingual`                       | `cs_CZ`      | Rodné číslo checksum-aware surrogates.                       |
 | `de`   | German     | `OpenMed/OpenMed-PII-German-SuperClinical-Small-44M-v1`    | `de_DE`      | Steuer-ID surrogates via `GermanSteuerIdProvider`.           |
+| `el`   | Greek      | `OpenMed/privacy-filter-multilingual`                       | `el_GR`      | AMKA Luhn-aware surrogates.                                  |
 | `en`   | English    | `OpenMed/OpenMed-PII-SuperClinical-Small-44M-v1`           | `en_US`      | Default model splits names into `first_name`/`last_name`.    |
 | `es`   | Spanish    | `OpenMed/OpenMed-PII-Spanish-SuperClinical-Small-44M-v1`   | `es_ES`      | DNI/NIE checksum-aware surrogates.                           |
 | `fr`   | French     | `OpenMed/OpenMed-PII-French-SuperClinical-Small-44M-v1`    | `fr_FR`      | NIR / INSEE surrogates via `fr_FR.ssn`.                      |
@@ -52,6 +54,7 @@ locale resolution, determinism, and cross-document surrogate vaults, see
 | `te`   | Telugu     | `OpenMed/OpenMed-PII-Telugu-SuperClinical-Large-434M-v1`   | `en_IN`      | No Faker Telugu locale — `en_IN` approximation (warns once). |
 | `th`   | Thai       | `OpenMed/privacy-filter-multilingual`                      | `th_TH`      | Served by the multilingual privacy filter; Thai NID-aware.   |
 | `tr`   | Turkish    | `OpenMed/OpenMed-PII-Turkish-SuperClinical-Small-44M-v1`   | `tr_TR`      | TCKN surrogates.                                             |
+| `uk`   | Ukrainian  | `OpenMed/privacy-filter-multilingual`                       | `uk_UA`      | RNOKPP checksum-aware surrogates.                            |
 
 Codes outside this list (for example `zh`, `pl`, `lv`, `sk`, `ms`, `tl`, `da`)
 are **not** model-backed PII languages. Several of them still have
@@ -76,6 +79,15 @@ Before: المريضة ليلى حسن، الهاتف +20 10 1234 5678
 After:  المريضة [NAME]، الهاتف [PHONE]
 ```
 
+### Czech — `cs`
+
+- Model: `OpenMed/privacy-filter-multilingual` · locale `cs_CZ`
+
+```text
+Before: Pacient Jan Novák, rodné číslo 751116/0008
+After:  Pacient [NAME], rodné číslo [ID]
+```
+
 ### German — `de`
 
 - Model: `OpenMed/OpenMed-PII-German-SuperClinical-Small-44M-v1` · locale `de_DE`
@@ -83,6 +95,15 @@ After:  المريضة [NAME]، الهاتف [PHONE]
 ```text
 Before: Patientin Anna Müller, Steuer-ID 86095742719
 After:  Patientin [NAME], Steuer-ID [ID]
+```
+
+### Greek — `el`
+
+- Model: `OpenMed/privacy-filter-multilingual` · locale `el_GR`
+
+```text
+Before: Ασθενής Γιώργος Παπαδόπουλος, ΑΜΚΑ 16117508024
+After:  Ασθενής [NAME], ΑΜΚΑ [ID]
 ```
 
 ### English — `en`
@@ -220,4 +241,13 @@ After:  ผู้ป่วย [NAME] โทร [PHONE]
 ```text
 Before: Hasta Ayşe Yılmaz, TCKN 10000000146
 After:  Hasta [NAME], TCKN [ID]
+```
+
+### Ukrainian — `uk`
+
+- Model: `OpenMed/privacy-filter-multilingual` · locale `uk_UA`
+
+```text
+Before: Пацієнтка Олена Коваль, РНОКПП 2974281300
+After:  Пацієнтка [NAME], РНОКПП [ID]
 ```

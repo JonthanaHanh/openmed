@@ -76,6 +76,12 @@ def test_script_language_hints_cover_detectable_scripts():
         assert set(hints) <= SUPPORTED_LANGUAGES | NATIONAL_ID_ONLY_LANGUAGES
 
 
+def test_cee_script_language_hints_route_to_native_packs():
+    assert "cs" in candidate_languages_for_script("Latin")
+    assert candidate_languages_for_script("Cyrillic") == ("uk",)
+    assert candidate_languages_for_script("Greek") == ("el",)
+
+
 def test_normalize_for_pii_detection_folds_obfuscation_with_offset_map():
     text = "Patient J\u200bo\u0301hn D\u03bfe"
     normalized = normalize_for_pii_detection(text)

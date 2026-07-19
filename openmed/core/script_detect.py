@@ -29,15 +29,15 @@ SUPPORTED_SCRIPTS = (
 )
 
 SCRIPT_LANGUAGE_HINTS: dict[str, tuple[str, ...]] = {
-    "Latin": ("en", "fr", "de", "it", "es", "nl", "pt", "tr"),
+    "Latin": ("en", "fr", "de", "it", "es", "nl", "pt", "tr", "cs"),
     "Arabic": ("ar",),
     "Han": ("ja",),
     "Hiragana/Katakana": ("ja",),
     "Hangul": ("ko",),
-    "Cyrillic": ("en",),
+    "Cyrillic": ("uk",),
     "Devanagari": ("hi",),
     "Telugu": ("te",),
-    "Greek": ("en",),
+    "Greek": ("el",),
     "Hebrew": ("en",),
     "Thai": ("en",),
     UNKNOWN_SCRIPT: ("en",),
