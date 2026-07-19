@@ -36,6 +36,12 @@ from openmed.eval.datasets.multilingual_ner import (
 )
 from openmed.eval.golden import load_benchmark_fixtures
 from openmed.eval.harness import BenchmarkFixture
+from openmed.eval.suites.indic_name_consistency import (
+    INDIC_NAME_CONSISTENCY,
+    evaluate_indic_name_consistency,
+    indic_name_consistency_metadata,
+    load_indic_name_fixtures,
+)
 from openmed.eval.suites.multimodal_dicom import (
     MULTIMODAL_DICOM,
     generate_synthetic_dicom_corpus,
@@ -76,6 +82,7 @@ DEFAULT_SUITES: tuple[str, ...] = (
     BIOMEDICAL_NER,
     MULTILINGUAL_NER,
     MULTIMODAL_DICOM,
+    INDIC_NAME_CONSISTENCY,
 )
 
 
@@ -112,6 +119,8 @@ def load_suite_fixtures(name: str, **kwargs: Any) -> list[Any]:
         return load_multilingual_ner_fixtures(paths=paths, **kwargs)
     if suite == MULTIMODAL_DICOM:
         return load_multimodal_dicom_fixtures(**kwargs)
+    if suite == INDIC_NAME_CONSISTENCY:
+        return load_indic_name_fixtures(kwargs.get("path"))
     raise ValueError(f"benchmark suite {suite!r} does not have a concrete loader yet")
 
 
@@ -135,6 +144,8 @@ def suite_metadata(name: str, **kwargs: Any) -> dict[str, Any]:
         return multilingual_ner_suite_metadata(**kwargs)
     if suite == MULTIMODAL_DICOM:
         return multimodal_dicom_metadata(**kwargs)
+    if suite == INDIC_NAME_CONSISTENCY:
+        return indic_name_consistency_metadata(**kwargs)
     return {"suite": suite}
 
 
@@ -148,6 +159,7 @@ __all__ = [
     "BIOMEDICAL_NER",
     "MULTILINGUAL_NER",
     "MULTIMODAL_DICOM",
+    "INDIC_NAME_CONSISTENCY",
     "RELATIONS",
     "RelationFixture",
     "RelationTrap",
@@ -182,4 +194,7 @@ __all__ = [
     "multimodal_dicom_metadata",
     "run_multimodal_dicom",
     "generate_synthetic_dicom_corpus",
+    "load_indic_name_fixtures",
+    "indic_name_consistency_metadata",
+    "evaluate_indic_name_consistency",
 ]

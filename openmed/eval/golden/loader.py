@@ -41,6 +41,7 @@ _NON_DEID_FIXTURE_NAMES = frozenset(
     {
         "context_multilingual.jsonl",
         "grounding_crosslingual.jsonl",
+        "indic_name_variants.json",
         "relation_assertion.jsonl",
         "relation_gold.jsonl",
         "surrogate_multilingual.jsonl",
@@ -163,7 +164,11 @@ def list_fixture_paths(path: str | Path | None = None) -> tuple[Path, ...]:
     if fixture_path.is_file():
         return (fixture_path,)
     paths = [
-        *fixture_path.glob("*.json"),
+        *(
+            path
+            for path in fixture_path.glob("*.json")
+            if path.name not in _NON_DEID_FIXTURE_NAMES
+        ),
         *(
             path
             for path in fixture_path.glob("**/*.jsonl")

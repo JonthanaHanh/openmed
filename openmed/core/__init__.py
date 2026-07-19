@@ -18,6 +18,14 @@ from .hf_hub import (
     prefetch_model,
     resolve_repo_id,
 )
+from .indic_name_match import (
+    DEFAULT_INDIC_NAME_SIMILARITY_THRESHOLD,
+    INDIC_LANGUAGE_CODES,
+    IndicNameNormalizer,
+    canonical_indic_name_key,
+    detect_name_script,
+    indic_names_match,
+)
 from .model_search import ModelQuery, ModelSearchResult, search_models
 from .models import ModelLoader, load_model
 from .offline import OfflineModeError
@@ -86,6 +94,12 @@ __all__ = [
     "InMemorySurrogateStore",
     "JsonFileSurrogateStore",
     "ENCRYPTION_SCHEME",
+    "IndicNameNormalizer",
+    "canonical_indic_name_key",
+    "indic_names_match",
+    "detect_name_script",
+    "INDIC_LANGUAGE_CODES",
+    "DEFAULT_INDIC_NAME_SIMILARITY_THRESHOLD",
     "PROFILE_PRESETS",
     "list_profiles",
     "get_profile",
