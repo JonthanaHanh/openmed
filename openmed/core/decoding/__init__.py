@@ -17,10 +17,12 @@ from .graph import (
     edge_f1,
 )
 from .spans import (
+    IndicSpanRefinement,
     TokenClassificationSpan,
     TokenClassificationStreamEvent,
     coerce_token_classification_spans,
     reconcile_stream_spans,
+    refine_indic_name_span,
     refine_privacy_filter_span,
     stable_span_id,
     stable_span_key,
@@ -43,6 +45,7 @@ __all__ = [
     "EdgeDecisionTrace",
     "GraphExplainReport",
     "IncrementalViterbiState",
+    "IndicSpanRefinement",
     "SpanEdge",
     "SpanGraph",
     "SpanGraphConstraints",
@@ -57,6 +60,7 @@ __all__ = [
     "edge_f1",
     "labels_to_token_spans",
     "reconcile_stream_spans",
+    "refine_indic_name_span",
     "refine_privacy_filter_span",
     "resolve_viterbi_biases",
     "stable_span_key",
