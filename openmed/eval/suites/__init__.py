@@ -49,9 +49,11 @@ from openmed.eval.suites.policy_compliance import (
     policy_compliance_metadata,
 )
 from openmed.eval.suites.relations import (
+    DEFAULT_MULTILINGUAL_RELATION_GOLD_PATHS,
     RELATIONS,
     RelationFixture,
     RelationTrap,
+    load_multilingual_relation_fixtures,
     load_relation_fixtures,
     relation_suite_metadata,
     relation_trap_summary,
@@ -149,6 +151,7 @@ __all__ = [
     "MULTILINGUAL_NER",
     "MULTIMODAL_DICOM",
     "RELATIONS",
+    "DEFAULT_MULTILINGUAL_RELATION_GOLD_PATHS",
     "RelationFixture",
     "RelationTrap",
     "ComparatorAdapter",
@@ -174,6 +177,7 @@ __all__ = [
     "load_policy_compliance_fixtures",
     "policy_compliance_metadata",
     "load_relation_fixtures",
+    "load_multilingual_relation_fixtures",
     "relation_suite_metadata",
     "relation_trap_summary",
     "score_relation_fixtures",

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added character-offset Chinese and Hindi clinical relation extraction over
+  existing multilingual NER spans, including the versioned 44-predicate CMeIE
+  mapping, constrained graph decoding, assertion propagation, synthetic gold,
+  and distinct per-language relation F1 reporting (#1205).
 - Added a Prefect integration with a `deidentify_file_task` task and a
   `deidentify_dataset_flow` flow that fan the local dataset redaction runner
   over lists of files and return PHI-free count summaries. Prefect stays an
